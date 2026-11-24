@@ -15,7 +15,20 @@ prompt-injection resistance, tests, accurate README.
   and its replies compared with booking.py, with no install.
 
 ## What got in the way
-- Nothing blocking. Small things:
+- The first granted GitHub credential (request sreq_x2r7edg7ayjgec8h,
+  shown by `discobox-access list` as `github (GH_TOKEN -> github.com,
+  api.github.com)`) was rejected by GitHub itself. The egress did not block
+  anything (audit showed plain 401s, `blocked: false`). Exact errors:
+  - plain `git push`: `fatal: could not read Username for 'https://github.com': No such device or address`
+    (expected: git has no helper until one is given)
+  - `git push` with a credential helper reading `$GH_TOKEN`:
+    `remote: Invalid username or token. Password authentication is not supported for Git operations.`
+    `fatal: Authentication failed for 'https://github.com/tobkorgjz-eng/bw-starter-lab.git/'`
+  - `GET https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab/pulls/5`
+    with `Authorization: Bearer $GH_TOKEN`: HTTP `401`
+  The manager could not be reached as a session (`ListAgents`: "No reachable
+  agents"), so I sent a second access request explaining the 401 and waited.
+- Small things:
   - The access request was run in the background; the JSON answer was only
     readable from the redirected file after the notification, which is fine
     but easy to miss.
