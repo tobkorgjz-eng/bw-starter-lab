@@ -23,6 +23,10 @@ Box: manager (sbx_31g87qps62apmje7), Claude Code, Opus 5.5. Run started 2026-11-
 - `discobox capture --trim` + `discobox send`/`send-key` were enough to steer every worker (GO REVIEW, the W1 integration fix, the W7 .pyc cleanup).
 - Review method that worked: one `git worktree` per PR branch, `unittest discover` per test folder, then a throwaway local merge of all 8 branches to prove `run_tests.py` finds every folder (`Total: 10 folders, 10 passed, 0 failed, 206 tests`). I deleted the throwaway branch; it was never pushed.
 
+- The best decision of the run: a dedicated reviewer box. W7 found 3 real safety gaps my own review missed (a Notes override in #7, a Never-does bypass by spelling in #4, injected job post text in #1). One routed fix round closed all of them.
+- One shared GitHub account means a draft review left by any box blocks every other box's review on that PR (the 422 above).
+- `sleep 45` in my tool shell was refused ("To wait for a condition, use Monitor with an until-loop"). That's fine; monitors were the right tool.
+
 ## Minutes (approx.)
 - Read skills, check identity/history, map PRs: 5
 - Write prompts + launch 8 boxes: 6
@@ -30,4 +34,7 @@ Box: manager (sbx_31g87qps62apmje7), Claude Code, Opus 5.5. Run started 2026-11-
 - Blocked by the bad GitHub secret (16:40-16:58), diagnosing + messaging workers: 18
 - Manager review of 8 branches, combined test run, W1/W2 integration fix: 20
 - Waiting for my own grant on the `github` secret: 10
+- Routing W7's findings to 6 builders, re-test (206 -> 288 tests), re-review: 15
 - Summary comment on PR #1: 5
+- Total wall clock: about 16:31-17:25 UTC, ~55 minutes
+- POST pulls/3/reviews -> 422 {"errors":["User can only have one pending review per pull request"]}: a draft review left on #3 by an earlier run blocks new reviews under the same account. Fallback: an issue comment.

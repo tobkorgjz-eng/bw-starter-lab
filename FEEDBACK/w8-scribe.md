@@ -19,6 +19,7 @@ Box: w8-scribe (scribe). Branch: w8-scribe. No token or credential appears in th
 - After GO SCRIBE: `git fetch origin` and `git show origin/<branch>:FEEDBACK/<file>` worked for all 7 branches on the first try. The manager's prompts in `docs/prompts/` were easy to check: every file is `common.md` + box name/task + `rules.md`, matching exactly.
 - Claude Code (not Discobox) blocked a foreground wait: `Blocked: sleep 70 followed by: cat ... To wait for a condition, use Monitor with an until-loop ...`. Background commands and Monitor worked.
 - REFRESH ALL: the builders updated their FEEDBACK files after the review round, so my first copies were out of date and a merge of all branches conflicted on six of them. Re-copying with `git show origin/<branch>:FEEDBACK/<file> > FEEDBACK/<file>` and checking with `git diff --quiet origin/<branch> -- FEEDBACK/<file>` made all seven match exactly. Lesson for the recipe: the scribe copies only after the last fix round.
+- Unauthenticated REST GETs stopped working late in the run (the reply was not a list, so most likely the 60-per-hour rate limit for unauthenticated calls). The same GET with the granted token worked.
 - I also committed `docs/__pycache__/*.pyc` by mistake (fixed with `git rm --cached` and `docs/.gitignore`).
 - My own slip: one command had two `python3 -` reading the same heredoc; the first waited on stdin until the 120 s timeout. Stopped it and rewrote it as a script file.
 
@@ -75,3 +76,4 @@ Audit line (`discobox-access audit --host api.github.com`):
 | Collect 7 FEEDBACK files, read all + prompts | 4 |
 | Write both docs, ranking, docs test (6 tests) | 12 |
 | REFRESH ALL: re-fetch, re-copy 7 files byte for byte, read the fix-round notes and W7's review on #9, update both docs | 10 |
+| FINAL REFRESH: W7's final file, the manager's final file, W7's re-review fixes, 422 note, scratch merge of all 8 branches + run_tests.py | 10 |

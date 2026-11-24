@@ -1,6 +1,6 @@
 # Factory recipe: the 9-box Blade Works run
 
-This is how one manager box and eight worker boxes built the Blade Works starter lab on 2026-11-24 (16:31 to about 17:15 UTC), including one review and fix round. It is written so someone else can repeat the run. Blade Works ("Runs by your rules, asks before it acts.") is a made-up business, and all data in the repo is made up.
+This is how one manager box and eight worker boxes built the Blade Works starter lab on 2026-11-24 (about 16:31 to 17:25 UTC, ~55 minutes), including one review and fix round. It is written so someone else can repeat the run. Blade Works ("Runs by your rules, asks before it acts.") is a made-up business, and all data in the repo is made up.
 
 Sources: the nine `FEEDBACK/*.md` files on this branch, the exact prompts in [`docs/prompts/`](prompts/), and the manager's notes. No token or credential appears here.
 
@@ -9,16 +9,16 @@ Sources: the nine `FEEDBACK/*.md` files on this branch, the exact prompts in [`d
 | Box | Branch | PR | What it built |
 | --- | --- | --- | --- |
 | manager | (none) | summary comment on #1 | Wrote the prompts, launched 8 boxes, approved 8 access requests, reviewed every branch, did a combined test run |
-| w1-client-rules-file | `w1-skill-client-rules-file` | #7 (new) | `skills/client-rules-file/`: SKILL.md, `rules_tool.py` checker, 2 worked examples, 25 tests |
+| w1-client-rules-file | `w1-skill-client-rules-file` | #7 (new) | `skills/client-rules-file/`: SKILL.md, `rules_tool.py` checker, 2 worked examples, 50 tests |
 | w2-client-intake | `w2-skill-client-intake` | #6 (new) | `skills/client-intake/`: intake questions, client brief template, worked example, `check_brief.py` + tests |
 | w3-upwork-proposal | `w5-upwork-helper` | #1 (reused) | `skills/upwork-proposal/`: fit score 1 to 5 with reasons, short honest draft, never sends; tests on 3 made-up posts |
 | w4-booking-bot | `w3-demo-bots-booking` | #5 (reused) | `demo-bots/booking/`: self-contained `demo.html`, confirms before booking, prompt-injection tripwire, tests |
 | w5-faq-bot | `w4-demo-bots-faq` | #2 (reused) | `demo-bots/faq/`: self-contained `demo.html`, answers only from its FAQ, hands off to a person, tests |
-| w6-starter-kit | `w2-starter-kit-templates` | #4 (reused; #3 merged into it) | `starter-kit/` client pack and repo-root `run_tests.py` (+ its own test) |
+| w6-starter-kit | `w2-starter-kit-templates` | #4 (reused; #3's files are included in #4; #3 superseded) | `starter-kit/` client pack and repo-root `run_tests.py` (+ its own test) |
 | w7-reviewer | `w7-reviewer` | #8 (new) | Review comments on every PR, scan script in `tools/`, notes in `docs/reviews/` |
 | w8-scribe | `w8-scribe` | #9 (new) | This file, `docs/discobox-feedback.md`, the collected FEEDBACK files |
 
-Combined check (manager, on a local merge of all 8 branches that was thrown away afterwards and never pushed): `Total: 10 folders, 10 passed, 0 failed, 206 tests` before the review round. After the fix round the same check ran 288 tests (manager's count).
+Final combined check after the fix round: `Total: 10 folders, 10 passed, 0 failed, 288 tests`, offline (run by W7 and the manager, and again by the scribe; see section 8). The first run, before the review, was 206 tests. Each run used a local scratch merge that was thrown away and never pushed.
 
 Nothing was merged into main. Nothing was pushed to main. No force push.
 
@@ -70,16 +70,19 @@ Task design notes that worked:
 | ~17:00–17:08 | W7 posts reviews on every PR. Builders fix the findings on their own branches (one round, same approvals) and update their FEEDBACK files. Tests: 206 → 288. |
 | ~17:05 | Manager copies its FEEDBACK file and the prompts into the scribe box and types "GO SCRIBE". |
 | ~17:12 | Manager types "REFRESH ALL"; the scribe copies every FEEDBACK file again, byte for byte from its branch, so a merge of all branches has no conflict on `FEEDBACK/`. |
+| ~17:15–17:25 | W7 re-reviews #1, #2, #4, #5, #6, #7 and #9 (20 of 21 findings fixed) and pushes its final FEEDBACK (`64f5ecf`). The manager writes its final FEEDBACK. The scribe makes its last copy and runs a scratch merge of all 8 branches. |
 
 ### One review and fix round
 
 After the builders pushed, W7 reviewed every PR (a REST review with event `COMMENT`, with file:line, a failing case and a suggested fix for each finding). Each builder fixed its findings on the same branch with the same approval. No box sent a new access request for the fix round.
 
-The real issues W7 found (as summarised by the manager):
+The manager called the dedicated reviewer box "the best decision of the run". W7 found three real safety gaps that the manager's own review had missed:
 
-- client **Notes** text could override the rules in the rules file
-- a "Never does" rule could be bypassed by spelling the action differently
-- **injected job post text** in the Upwork proposal skill: the post is now treated as data, and injection phrases, contact details and links are flagged
+- **#7 (W1, client rules file):** client **Notes** text could override the rules
+- **#4 (W6, starter kit):** a "Never does" rule could be bypassed by spelling the action differently
+- **#1 (W3, Upwork proposal):** **injected job post text**. The post is now treated as data, and injection phrases, contact details and links are flagged
+
+In the re-review, W7 re-ran the same hostile inputs (not only reading the diffs) and found 20 of 21 findings fixed. The one left open is a nit: the root README lists only `starter-kit/`, on #4.
 
 From the builders' own files: W2 fixed three findings on #6 (18 → 25 tests). W3 fixed the injection handling and wording on #1, and fixed one test that matched the company name "Blade Works" against its own "never says works" check. W4 made cancelling require a name and made matching respect word boundaries on #5. W5 stopped ordinary questions ("act as", "from now on") from being flagged as injection on #2. W6 aligned action names and the "information, not instructions" line across the prompts on #4.
 
@@ -117,17 +120,17 @@ Rough minutes from each box's FEEDBACK file. "Lost to bad secret" counts debuggi
 
 | Box | Total (approx.) | Lost to bad secret | Review fix round |
 | --- | --- | --- | --- |
-| manager | 69 | 18 (+10 re-asking under the right secret name) | (review, merge test and integration fix are in the total) |
+| manager | 84 | 18 (+10 re-asking under the right secret name) | 15 (routing findings, re-test, re-review) |
 | w1-client-rules-file | 38 | 19 | not stated |
 | w2-client-intake | 50 | 6 debugging, ~20 wall clock | 15 |
 | w3-upwork-proposal | 60 | 6 debugging, ~18 wall clock | 27 |
 | w4-booking-bot | 65 | 6 debugging (+1 denied second request) | 15 |
 | w5-faq-bot | 54 | not stated; ~18 wall clock | 10 |
 | w6-starter-kit | 73 | 22 (+4 on an empty variable after the fix) | 15 |
-| w7-reviewer | 105 | idle wait, not counted | (review is its main task) |
-| w8-scribe | ~60 | 20 | 10 (refresh + updates) |
+| w7-reviewer | 130 | idle wait, not counted | 25 (re-review) |
+| w8-scribe | ~70 | 20 | 20 (two refreshes + scratch merge) |
 
-The whole run took about 45 minutes of wall clock, and about 18 of them were spent waiting on the bad secret, with all nine boxes waiting at once.
+The whole run took about 55 minutes of wall clock (16:31 to 17:25 UTC), and about 18 of them were spent waiting on the bad secret, with all nine boxes waiting at once.
 
 ## 7. What to change next time
 
@@ -138,5 +141,11 @@ The whole run took about 45 minutes of wall clock, and about 18 of them were spe
 5. Rule 1 checks authors only (`%an <%ae>`). The initial commit's committer was `GitHub <noreply@github.com>` (made in the web UI). W5 noticed this and was unsure whether it passed. Write the rule as `git log --format='%an <%ae> | %cn <%ce>'` and list both allowed no-reply identities.
 6. Fix the shared input format between W1 and W2 in both prompts, instead of telling them to "line up".
 7. Plan the review and fix round from the start: tell builders a review is coming, to fix on the same branch with the same approval, and to add a "Review fixes" section to their FEEDBACK file. Tell the scribe to copy FEEDBACK files only after the fix round, byte for byte.
-8. Tell every box never to probe a write endpoint with a real request. All boxes share one GitHub account, so a test `POST .../reviews` with body `{}` created a real pending review on PR #3 that no box could remove (see the feedback doc).
+8. Tell every box never to probe a write endpoint with a real request. All boxes share one GitHub account, so a test `POST .../reviews` with body `{}` created a real pending review on PR #3 that no box could remove. After that, every other review on #3 failed with `422 {"errors":["User can only have one pending review per pull request"]}`, and the fallback was an issue comment (see the feedback doc).
+10. **Always include a dedicated reviewer box,** and route its findings back to the builders for one fix round. It found three safety gaps that the manager's review missed.
+11. **The scribe copies FEEDBACK files last.** Every box updated its FEEDBACK file after the fix round, and each later push made the scribe's copy conflict on merge. Copy only after the last FEEDBACK push, check each with `git diff --quiet origin/<branch> -- FEEDBACK/<file>`, and finish with a scratch merge of every branch.
 9. Use `curl` for REST calls from a box. In W7's box, Python `urllib` did not reach the egress, while `curl` did.
+
+## 8. Final scratch merge (scribe)
+
+SCRATCH_RESULT_PLACEHOLDER

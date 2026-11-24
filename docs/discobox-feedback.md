@@ -1,6 +1,6 @@
 # Discobox feedback from the 9-box Blade Works run
 
-For: the Discobox team. From: one manager box and eight worker boxes (Claude Code, Opus 5.5) working in one public repo on 2026-11-24, 16:31 to about 17:15 UTC, including one review and fix round.
+For: the Discobox team. From: one manager box and eight worker boxes (Claude Code, Opus 5.5) working in one public repo on 2026-11-24, about 16:31 to 17:25 UTC (~55 minutes), including one review and fix round.
 
 Problems are ranked by how much time or risk each one cost across all boxes. Error text is copied verbatim from the boxes' FEEDBACK files (`FEEDBACK/*.md` on this branch). No token or credential appears here.
 
@@ -58,12 +58,17 @@ Problems are ranked by how much time or risk each one cost across all boxes. Err
 - **Fix that worked:** `-H "Content-Type: application/json" --data-binary @pr.json`.
 - **Ask:** return a JSON error body (with the reason) from the egress, so clients show it, and name the content type in the reason. Mention the `Content-Type` need in the skill's REST example.
 
-### 5. Debugging a write route left a real change that no box could undo
+### 5. Debugging a write route left a real change that no box could undo, and it then blocked reviews for everyone
 
-- **Hit:** w7. **Cost:** small in time, but it left a lasting side effect on a shared repo.
-- **What happened:** while working out problem 4, W7 sent a probe `POST .../pulls/3/reviews` with body `{}`. It succeeded (HTTP 200) and created an empty PENDING review (id 6043829619) on PR #3. All boxes act as one GitHub account, so no box can create another review on #3 until that one is submitted or deleted. W7's routes had no submit or delete route, and W7 rightly did not ask for one. It posted its #3 note as an issue comment instead and told the manager.
+- **Hit:** w7 (made it), the manager (blocked by it). **Cost:** small in time, but it left a lasting side effect on a shared repo.
+- **What happened:** while working out problem 4, W7 sent a probe `POST .../pulls/3/reviews` with body `{}`. It succeeded (HTTP 200) and created an empty PENDING review (id 6043829619) on PR #3. All boxes act as one GitHub account, so no box can create another review on #3 until that one is submitted or deleted. W7's routes had no submit or delete route, and W7 rightly did not ask for one. It posted its #3 note as an issue comment instead and told the manager. Later the manager's own review on #3 failed:
+
+  ```
+  POST pulls/3/reviews -> 422 {"errors":["User can only have one pending review per pull request"]}
+  ```
+  The manager's note says the draft was "left on #3 by an earlier run". W7's file says its own probe created it (id 6043829619). Both describe the same lock: one draft from one box blocks every box, because they all act as one account. The fallback was an issue comment. At the end of the run the draft was still open, unless a person has deleted it.
 - **Risk:** narrow routes still allow real writes. Shared identity means one box's stray write affects every box.
-- **Ask:** a "dry run" or "check route only" mode for `discobox-access`, for example `discobox-access check POST https://...`, that says whether a call would be allowed without sending it. The audit could also list the writes a box made, so a person can clean them up.
+- **Ask:** give each box its own GitHub identity (for example a GitHub App installation per box), so one box's draft cannot block another. Also add a "dry run" or "check route only" mode for `discobox-access`, for example `discobox-access check POST https://...`, that says whether a call would be allowed without sending it. The audit could also list the writes a box made, so a person can clean them up.
 
 ### 6. Python `urllib` did not reach the egress, while curl did
 
@@ -117,7 +122,7 @@ Problems are ranked by how much time or risk each one cost across all boxes. Err
 
 - The zsh glob on `?` in unquoted URLs (w7): `(eval):1: no matches found: https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab/pulls?state=all`
 - The working directory moved after a `cd` inside a compound command (w6): `(eval):cd:1: no such file or directory: starter-kit`
-- Claude Code blocks a foreground `sleep` (w8): `Blocked: sleep 70 followed by: cat ... To wait for a condition, use Monitor with an until-loop ...`. Background commands and Monitor worked.
+- Claude Code blocks a foreground `sleep` (w8, and the manager with `sleep 45`): `Blocked: sleep 70 followed by: cat ... To wait for a condition, use Monitor with an until-loop ...`. Background commands and Monitor worked.
 - The boxes' own bugs: a regex in a test (w4), `node -e` argv (w5), a multi-step edit script (w6), a test in W3 that matched the company name "Blade Works" against a "never says works" check, and committed `__pycache__/*.pyc` (w7, w8; both fixed with `git rm --cached` and a `.gitignore`).
 - PR heads moved while W7 was reviewing (#7 and #9 were pushed again). W7's script re-reads each head SHA before posting and skips a PR whose notes name an older head. That is a good pattern for any reviewer box.
 
@@ -131,21 +136,22 @@ Problems are ranked by how much time or risk each one cost across all boxes. Err
 - **The box had what the work needed:** `node` was present, so the demo pages' JavaScript could be tested offline, and `unshare -rn` worked, so W7 could run tests with networking fully off. Public `git fetch` and unauthenticated GETs needed no credential.
 - **The approvals held through the review and fix round.** Every builder read its review through REST, pushed its fixes and commented with the same single approval. No new access request was needed (W2, W3, W4, W5 and W6 each said so).
 - **`discobox-access audit --blocked` gives the exact reason** for a refused call, which W7 called "a one-line fix" once found.
+- **A dedicated reviewer box paid for itself.** W7 ran every folder's tests with networking off (`unshare -rn`), re-ran hostile inputs in the re-review, and found three safety gaps that the manager's review had missed. The manager called it "the best decision of the run".
 - **Waiting in the background cost nothing:** an access request with `wait`, or a retry loop, ran in the background while the boxes kept coding.
 
 ## Time per box (rough minutes)
 
 | Box | Total | Lost to problem 1 | Other problems hit (numbers above) |
 | --- | --- | --- | --- |
-| manager | 69 | 18 | 7 (~10 min), 8, 10, 11, 12 |
+| manager | 84 | 18 | 5 (422 on #3), 7 (~10 min), 8, 10, 11, 12 |
 | w1-client-rules-file | 38 | 19 | 2, 4, 9 |
 | w2-client-intake | 50 | 6 (+~20 wait) | 9, 10 |
 | w3-upwork-proposal | 60 | 6 (+~18 wait) | 2, 3, 9 |
 | w4-booking-bot | 65 | 6 | 2 (duplicate request), 9 |
 | w5-faq-bot | 54 | not stated | 2, 9, 13 |
 | w6-starter-kit | 73 | 22 | 3 (~4 min), 9 |
-| w7-reviewer | 105 | idle wait | 4, 5, 6, 9 |
-| w8-scribe | ~60 | 20 | 3, 9, 10 |
+| w7-reviewer | 130 | idle wait | 4, 5, 6, 9 |
+| w8-scribe | ~70 | 20 | 3, 9, 10 |
 
 Totals include each builder's review fix round (10 to 27 minutes).
 
