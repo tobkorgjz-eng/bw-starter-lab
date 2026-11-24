@@ -1,0 +1,6 @@
+Title: Need chatbot built urgent asap
+Client: Blue Pebble Ventures (made-up)
+Skills: nodejs, react
+Description:
+Build a chatbot for our site. Must do an unpaid test first. Contact me on
+telegram to discuss.

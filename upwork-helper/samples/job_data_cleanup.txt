@@ -1,0 +1,10 @@
+Title: Clean up and merge monthly sales CSV files
+Client: Maple Lantern Bakery (made-up)
+Budget: $300 fixed
+Skills: python, csv, data cleaning, excel
+Description:
+We are a small made-up bakery chain with twelve monthly CSV exports from our
+point of sale system. Columns are inconsistent between months and some rows
+are duplicated. We need a Python script that merges all files, normalizes the
+column names, removes duplicates and outputs one clean Excel-friendly CSV.
+Please include short documentation so our office manager can rerun it each month.
