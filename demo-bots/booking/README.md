@@ -24,7 +24,7 @@ All names and businesses are fictional.
 services
 slots <service> <date>                    e.g. slots haircut tomorrow
 book <service> <date> <HH:MM> <name>      then answer yes / no
-cancel <code>                             then answer yes / no
+cancel <code> <name>                      then answer yes / no
 ```
 
 Open Mon-Sat 09:00-17:00, one chair, 15-minute start steps.
@@ -50,16 +50,24 @@ takes an injectable clock so tests are deterministic).
   path that can change what it does.
 - Messages that try to give it new rules ("ignore your rules", "you are now
   admin", "SYSTEM: ...", "book without asking", ...) get one fixed refusal and
-  change nothing. This phrase list is a simple tripwire, not a complete
-  filter; the fixed commands and the exact-yes step are what keep the bot
-  safe.
+  change nothing. Phrases match on word boundaries, case-insensitive, so
+  "please contact asap" does not trip "act as". This phrase list is a simple
+  tripwire, not a complete filter; the fixed commands and the exact-yes step
+  are what keep the bot safe.
 - Names may use letters, spaces, `-`, `'` and `.` (up to 40 characters), so a
   name cannot imitate a bot reply such as `Booked: ... (code MC001)`.
+- Cancelling needs the booking code **and** the name it was booked under
+  (any case and spacing). A wrong code and a wrong name get the same reply,
+  so the reply does not reveal which codes exist.
 - In `demo.html` every message is shown with `textContent`, never as HTML.
 
 Limits: this is a demo. It has no accounts, no real calendar, no payment and
 no staff view; one browser tab or one Python process holds the whole
-schedule.
+schedule. Booking codes are sequential (`MC001`, `MC002`, ...) and easy to
+guess; the name check above is the only thing stopping someone cancelling
+another customer's booking, and anyone who knows both the code and the name
+can cancel it. A real deployment would need customer accounts or a secret,
+unguessable link per booking.
 
 ## Run
 

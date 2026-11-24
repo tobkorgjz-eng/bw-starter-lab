@@ -53,10 +53,10 @@ class SalonTests(unittest.TestCase):
 
     def test_cancel_frees_slot(self):
         b = self.salon.book("Customer", "haircut", at(10))
-        self.salon.cancel(b.code.lower())
+        self.salon.cancel(b.code.lower(), "customer")
         self.assertIn(at(10), self.salon.free_slots(date(2030, 1, 15), "haircut"))
         with self.assertRaises(BookingError):
-            self.salon.cancel(b.code)
+            self.salon.cancel(b.code, "Customer")
 
 
 class NowTests(unittest.TestCase):
@@ -141,7 +141,7 @@ class BotTests(unittest.TestCase):
 
     def test_cancel_asks_before_confirming(self):
         self.salon.book("Test Customer", "haircut", at(10))
-        reply = self.bot.handle("cancel mc001")
+        reply = self.bot.handle("cancel mc001 Test Customer")
         self.assertIn("cancel", reply)
         self.assertIn("(yes/no)", reply)
         self.assertEqual(len(self.salon.bookings), 1)
@@ -149,7 +149,7 @@ class BotTests(unittest.TestCase):
         self.assertEqual(self.salon.bookings, {})
 
     def test_cancel_unknown_code(self):
-        self.assertIn("No booking", self.bot.handle("cancel MC999"))
+        self.assertIn("No booking", self.bot.handle("cancel MC999 Test Customer"))
         self.assertIsNone(self.bot.pending)
 
     def test_slot_taken_between_ask_and_yes(self):

@@ -42,14 +42,17 @@ NAME_MAX = 40
 # as "Booked: ... (code MC001)".
 _NAME_RE = re.compile(r"^[^\W\d_](?:[^\W\d_]|[ .'-])*$")
 
-# Phrases that try to give the bot new instructions. Matching is a simple,
-# case-insensitive substring check; it is a tripwire, not the safety net.
-# The real protection is that the bot has no free-text "do anything" path.
+# Phrases that try to give the bot new instructions. Matching is
+# case-insensitive and on word boundaries ("contact asap" does not match
+# "act as"); it is a tripwire, not the safety net. The real protection is
+# that the bot has no free-text "do anything" path.
 INJECTION_PATTERNS = (
     "ignore", "disregard", "forget your", "forget the", "override",
     "your rules", "new rules", "system prompt", "system:", "you are now",
-    "act as", "pretend", "jailbreak", "developer mode", "admin mode",
-    "without asking", "without confirm", "skip confirm", "no need to ask",
+    "ignoring", "act as", "pretend", "pretending", "jailbreak",
+    "developer mode", "admin mode", "without asking", "without confirm",
+    "without confirmation", "skip confirm", "skip confirmation",
+    "skip the confirmation", "no need to ask",
     "don't ask", "dont ask", "already confirmed", "pre-confirmed",
     "auto-confirm", "<script",
 )
@@ -59,9 +62,24 @@ REFUSAL = ("I can only help with bookings, and my rules stay the same: "
            "changed.")
 
 
+def _pattern_re(phrase):
+    # A boundary is only required where the phrase starts or ends with a
+    # letter or digit ("system:" and "<script" carry their own edge).
+    start = r"(?<![a-z0-9])" if phrase[0].isalnum() else ""
+    end = r"(?![a-z0-9])" if phrase[-1].isalnum() else ""
+    return start + re.escape(phrase) + end
+
+
+_INJECTION_RE = re.compile("|".join(_pattern_re(p) for p in INJECTION_PATTERNS))
+
+
 def looks_like_injection(text):
-    low = (text or "").lower()
-    return any(p in low for p in INJECTION_PATTERNS)
+    low = (text or "").lower().replace("\u2019", "'")
+    return _INJECTION_RE.search(low) is not None
+
+
+def _same_name(a, b):
+    return " ".join(a.split()).lower() == " ".join(b.split()).lower()
 
 
 class BookingError(ValueError):
@@ -161,14 +179,19 @@ class Salon:
         self.bookings[code] = booking
         return booking
 
-    def get(self, code):
+    def find(self, code, customer):
+        """Return the booking only if both code and name match.
+
+        The same message is used for a wrong code and a wrong name, so the
+        reply does not reveal which codes exist.
+        """
         booking = self.bookings.get((code or "").strip().upper())
-        if booking is None:
-            raise BookingError(f"No booking found with code '{code}'.")
+        if booking is None or not _same_name(booking.customer, customer or ""):
+            raise BookingError("No booking found with that code and name.")
         return booking
 
-    def cancel(self, code):
-        booking = self.get(code)
+    def cancel(self, code, customer):
+        booking = self.find(code, customer)
         del self.bookings[booking.code]
         return booking
 
@@ -198,7 +221,7 @@ HELP = (
     "  services\n"
     "  slots <service> <date>\n"
     "  book <service> <date> <HH:MM> <your name>\n"
-    "  cancel <code>\n"
+    "  cancel <code> <your name>\n"
     "Dates: YYYY-MM-DD, today or tomorrow."
 )
 
@@ -208,7 +231,7 @@ class BookingBot:
 
     def __init__(self, salon):
         self.salon = salon
-        self.pending = None  # ("book", args) or ("cancel", code)
+        self.pending = None  # ("book", args) or ("cancel", (code, name))
 
     def greet(self):
         return f"Hi! This is the {SALON_NAME} booking helper.\n{HELP}"
@@ -266,10 +289,11 @@ class BookingBot:
                 "Shall I book it? (yes/no)")
 
     def _ask_cancel(self, args):
-        if len(args) != 1:
-            raise BookingError("Use: cancel <code>")
-        booking = self.salon.get(args[0])
-        self.pending = ("cancel", booking.code)
+        if len(args) < 2:
+            raise BookingError("Use: cancel <code> <your name>")
+        name = " ".join(args[1:])
+        booking = self.salon.find(args[0], name)
+        self.pending = ("cancel", (booking.code, name))
         return (f"Just to check: cancel {booking.describe()}? (yes/no)")
 
     def _answer(self, word):
@@ -287,7 +311,7 @@ class BookingBot:
             if kind == "book":
                 booking = self.salon.book(*payload)
                 return f"Booked: {booking.describe()}."
-            booking = self.salon.cancel(payload)
+            booking = self.salon.cancel(*payload)
             return f"Cancelled: {booking.describe()}."
         except BookingError as exc:
             return f"Sorry: {exc}"
