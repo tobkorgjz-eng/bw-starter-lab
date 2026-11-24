@@ -29,3 +29,9 @@ plan, through `--approvals FILE` (a JSON list of action names) or
 inside the plan is ignored, so the action still gets ASK, and the output notes
 that the in-plan approval was ignored. "Never does" actions stay blocked even
 when the owner approves them.
+
+**A yes covers one action, one time.** Each `--approve ACTION`, and each entry
+in the approvals file, allows one occurrence of that action in the plan. Give
+it twice to allow two. Action names are compared without regard to case,
+spaces or `-` versus `_`, so `Delete-Records` is still `delete_records`
+(BLOCK).

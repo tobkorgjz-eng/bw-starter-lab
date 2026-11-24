@@ -83,6 +83,102 @@ class CheckActionTest(unittest.TestCase):
             cr.check_action(self.rules, "order_flowers", {"order_flowers"})[0], cr.ALLOW)
 
 
+
+class CanonicalNameTest(unittest.TestCase):
+    def test_variants(self):
+        for raw in ["delete_records", "Delete_Records", "delete-records",
+                    "DELETE-RECORDS", "delete records", " Delete__Records ",
+                    "delete - records", "_delete_records_"]:
+            with self.subTest(raw=raw):
+                self.assertEqual(cr.canonical_name(raw), "delete_records")
+
+    def test_rules_file_names_are_canonical(self):
+        rules = cr.parse_rules("## Never does\n- `Delete-Records` - x\n")
+        self.assertEqual(rules, {"delete_records": cr.NEVER})
+
+    def test_spelling_variants_conflict(self):
+        text = "## May do alone\n- `send_email`\n## Never does\n- `Send-Email`\n"
+        with self.assertRaises(cr.RulesError):
+            cr.parse_rules(text)
+
+
+class NeverCannotBeRespelledTest(unittest.TestCase):
+    VARIANTS = ["Delete_Records", "delete-records", "DELETE RECORDS",
+                "delete__records"]
+
+    def setUp(self):
+        self.rules = cr.parse_rules(SAMPLE)
+
+    def test_variants_block(self):
+        for name in self.VARIANTS:
+            with self.subTest(name=name):
+                self.assertEqual(cr.check_action(self.rules, name)[0], cr.BLOCK)
+
+    def test_variants_block_even_when_approved(self):
+        for name in self.VARIANTS:
+            for approval in (name, "delete_records", "Delete-Records"):
+                with self.subTest(name=name, approval=approval):
+                    res = cr.check_plan(self.rules, [name], [approval])
+                    self.assertEqual(res[0]["verdict"], cr.BLOCK)
+                    res = cr.check_plan(self.rules, [{"action": name,
+                                                      "owner_approved": True}],
+                                        [approval])
+                    self.assertEqual(res[0]["verdict"], cr.BLOCK)
+
+    def test_other_sections_match_variants(self):
+        self.assertEqual(cr.check_action(self.rules, "Read-Inbox")[0], cr.ALLOW)
+        self.assertEqual(cr.check_action(self.rules, "SEND EMAIL")[0], cr.ASK)
+        res = cr.check_plan(self.rules, ["Send-Email"], ["send_email"])
+        self.assertEqual(res[0]["verdict"], cr.ALLOW)
+        self.assertEqual(res[0]["action"], "Send-Email")  # shown as written
+
+
+class OneYesOneTimeTest(unittest.TestCase):
+    def setUp(self):
+        self.rules = cr.parse_rules(SAMPLE)
+
+    def verdicts(self, plan, approvals):
+        return [r["verdict"] for r in cr.check_plan(self.rules, plan, approvals)]
+
+    def test_one_yes_covers_one_occurrence(self):
+        self.assertEqual(self.verdicts(["send_email"] * 3, ["send_email"]),
+                         [cr.ALLOW, cr.ASK, cr.ASK])
+
+    def test_used_up_yes_is_explained(self):
+        res = cr.check_plan(self.rules, ["send_email", "send_email"], ["send_email"])
+        self.assertIn("already used", res[1]["reason"])
+        self.assertNotIn("already used", res[0]["reason"])
+
+    def test_count_matches_yeses(self):
+        self.assertEqual(self.verdicts(["send_email"] * 3, ["send_email"] * 2),
+                         [cr.ALLOW, cr.ALLOW, cr.ASK])
+        self.assertEqual(self.verdicts(["send_email"] * 2, ["send_email"] * 3),
+                         [cr.ALLOW, cr.ALLOW])
+
+    def test_spelling_variants_share_one_yes(self):
+        self.assertEqual(self.verdicts(["send_email", "Send-Email"], ["SEND_EMAIL"]),
+                         [cr.ALLOW, cr.ASK])
+
+    def test_unlisted_action_counts_too(self):
+        self.assertEqual(self.verdicts(["order_flowers"] * 2, ["order_flowers"]),
+                         [cr.ALLOW, cr.ASK])
+
+    def test_alone_and_never_use_no_yes(self):
+        plan = ["read_inbox", "delete_records", "send_email"]
+        self.assertEqual(self.verdicts(plan, ["read_inbox", "delete_records",
+                                              "send_email"]),
+                         [cr.ALLOW, cr.BLOCK, cr.ALLOW])
+        self.assertEqual(self.verdicts(["delete_records", "send_email"],
+                                       ["send_email"]),
+                         [cr.BLOCK, cr.ALLOW])
+
+    def test_caller_approvals_not_changed(self):
+        approvals = ["send_email"]
+        self.verdicts(["send_email"], approvals)
+        self.assertEqual(approvals, ["send_email"])
+        self.assertEqual(self.verdicts(["send_email"], approvals), [cr.ALLOW])
+
+
 class CheckPlanTest(unittest.TestCase):
     def setUp(self):
         self.rules = cr.parse_rules(SAMPLE)
@@ -218,6 +314,30 @@ class MainTest(unittest.TestCase):
         self.assertIn("Summary: 3 allow, 2 ask, 1 block", text)
         # issue_refund was self-approved in the plan but not by the owner.
         self.assertRegex(text, r"ASK\s+issue_refund")
+
+
+    def test_cli_one_approve_flag_covers_one_send(self):
+        code, out, _ = self._run(["send_email", "send_email"],
+                                 extra=["--approve", "send_email"])
+        self.assertEqual(code, 1)
+        self.assertIn("Summary: 1 allow, 1 ask, 0 block", out)
+        code, out, _ = self._run(["send_email", "send_email"],
+                                 extra=["--approve", "send_email",
+                                        "--approve", "send_email"])
+        self.assertEqual(code, 0, out)
+
+    def test_cli_flag_and_file_add_up(self):
+        code, out, _ = self._run(["send_email", "send_email"],
+                                 approvals=["send_email"],
+                                 extra=["--approve", "send_email"])
+        self.assertEqual(code, 0, out)
+
+    def test_cli_respelled_never_is_blocked(self):
+        for name in ["Delete_Records", "delete-records"]:
+            with self.subTest(name=name):
+                code, out, _ = self._run([name], extra=["--approve", name])
+                self.assertEqual(code, 1)
+                self.assertIn("Summary: 0 allow, 0 ask, 1 block", out)
 
 
 if __name__ == "__main__":

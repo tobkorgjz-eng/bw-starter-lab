@@ -20,11 +20,19 @@ Verdicts per action:
     ASK      - needs the owner's yes (or not listed) and the owner did not
     BLOCK    - in "Never does" (owner approval does not change this)
 
+Action names are compared after canonical_name(): case, spaces and "-"
+versus "_" do not matter, so "Delete-Records" is the same as "delete_records".
+
+A yes covers one action, one time. Each --approve ACTION (or each entry in
+the approvals file) allows one occurrence of that action in the plan; to
+allow it twice, give it twice.
+
 Exit code: 0 if every action is ALLOW, 1 if any action is ASK or BLOCK,
 2 on bad input. Standard library only, no network.
 """
 
 import argparse
+import collections
 import json
 import os
 import re
@@ -48,6 +56,17 @@ _BULLET = re.compile(r"^\s*[-*]\s+`([A-Za-z0-9_.:-]+)`")
 _SELF_APPROVAL_KEYS = ("owner_approved", "approved", "approval")
 
 DEFAULT_RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "RULES.md")
+
+
+def canonical_name(name):
+    """Return the form action names are compared in.
+
+    Lower case; spaces and "-" become "_"; repeated "_" collapse; leading and
+    trailing "_" are dropped. "Delete-Records", "delete records" and
+    "DELETE__RECORDS" all become "delete_records".
+    """
+    name = re.sub(r"[\s\-_]+", "_", name.strip().lower())
+    return name.strip("_")
 
 
 class RulesError(ValueError):
@@ -74,7 +93,7 @@ def parse_rules(text):
         m = _BULLET.match(line)
         if not m:
             continue
-        name = m.group(1)
+        name = canonical_name(m.group(1))
         if name in rules and rules[name] != current:
             raise RulesError(
                 "action %r is listed in two sections (%s and %s)"
@@ -93,6 +112,9 @@ def load_rules(path=DEFAULT_RULES):
 
 def normalize_plan(plan):
     """Turn a plan list into [(action, self_approval_attempted)].
+
+    The action is returned as written (stripped); compare it with
+    canonical_name().
 
     Any approval field in the plan is ignored; we only note that it was there.
     """
@@ -114,17 +136,25 @@ def normalize_plan(plan):
 
 
 def normalize_approvals(approvals):
-    """Turn the owner's approvals (a list of action names) into a set."""
+    """Turn the owner's approvals into a Counter of canonical action names.
+
+    Each entry is one yes for one occurrence: ["send_email", "send_email"]
+    allows two send_email actions. A Counter passed in keeps its counts.
+    """
     if approvals is None:
-        return frozenset()
-    if not isinstance(approvals, (list, tuple, set, frozenset)):
+        return collections.Counter()
+    if isinstance(approvals, collections.Counter):
+        items = list(approvals.elements())
+    elif isinstance(approvals, (list, tuple, set, frozenset)):
+        items = list(approvals)
+    else:
         raise RulesError("owner approvals must be a JSON list of action names")
-    out = set()
-    for i, name in enumerate(approvals):
+    out = collections.Counter()
+    for i, name in enumerate(items):
         if not isinstance(name, str) or not name.strip():
             raise RulesError("owner approval %d: must be an action name" % i)
-        out.add(name.strip())
-    return frozenset(out)
+        out[canonical_name(name)] += 1
+    return out
 
 
 def load_approvals(path):
@@ -132,18 +162,27 @@ def load_approvals(path):
         return normalize_approvals(json.load(fh))
 
 
-def check_action(rules, action, owner_approvals=frozenset()):
+def check_action(rules, action, owner_approvals=None):
     """Return (verdict, reason) for one action.
 
-    owner_approvals is the set of action names the owner said yes to,
-    supplied outside the bot's plan.
+    owner_approvals holds the action names the owner said yes to, supplied
+    outside the bot's plan. If it is a Counter, an ALLOW that relies on the
+    owner's yes uses one up (a yes covers one action, one time). A "Never
+    does" action is BLOCK whatever the approvals say, and uses none up.
     """
-    cat = rules.get(action)
-    approved = action in owner_approvals
+    if owner_approvals is None:
+        owner_approvals = collections.Counter()
+    elif not isinstance(owner_approvals, collections.Counter):
+        owner_approvals = normalize_approvals(owner_approvals)
+    name = canonical_name(action)
+    cat = rules.get(name)
     if cat == NEVER:
         return BLOCK, "never allowed"
     if cat == ALONE:
         return ALLOW, "may do alone"
+    approved = owner_approvals[name] > 0
+    if approved:
+        owner_approvals[name] -= 1
     if cat == NEEDS_YES:
         if approved:
             return ALLOW, "owner said yes"
@@ -156,9 +195,12 @@ def check_action(rules, action, owner_approvals=frozenset()):
 def check_plan(rules, plan, owner_approvals=None):
     """Return a list of dicts: action, verdict, reason."""
     approvals = normalize_approvals(owner_approvals)
+    given = collections.Counter(approvals)
     results = []
     for action, attempted in normalize_plan(plan):
         verdict, reason = check_action(rules, action, approvals)
+        if verdict == ASK and given[canonical_name(action)] > 0:
+            reason += " (the owner's yes was already used; a yes covers one action, one time)"
         if attempted:
             reason += " (approval inside the plan ignored)"
         results.append({"action": action, "verdict": verdict, "reason": reason})
@@ -188,14 +230,15 @@ def main(argv=None):
     )
     parser.add_argument(
         "--approve", metavar="ACTION", action="append", default=[],
-        help="an action the owner said yes to (repeatable)",
+        help="one yes from the owner for one occurrence of ACTION "
+             "(repeat it to allow the action more than once)",
     )
     args = parser.parse_args(argv)
     try:
         rules = load_rules(args.rules)
-        approvals = set(normalize_approvals(args.approve))
+        approvals = normalize_approvals(args.approve)
         if args.approvals:
-            approvals |= load_approvals(args.approvals)
+            approvals += load_approvals(args.approvals)
         with open(args.plan, encoding="utf-8") as fh:
             plan = json.load(fh)
         results = check_plan(rules, plan, approvals)

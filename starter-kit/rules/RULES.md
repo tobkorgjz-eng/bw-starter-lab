@@ -13,6 +13,10 @@ How the rules work:
 - **Never does** — the assistant refuses these, even if asked.
 - Anything **not listed** is treated as *needs the owner's yes*. When in
   doubt, the assistant asks.
+- **A yes covers one action, one time.** If the assistant wants to send
+  three emails, it needs three yeses.
+- Spelling does not get around the rules: `Delete-Records`, `delete records`
+  and `delete_records` are the same action.
 
 Each rule is one bullet that starts with an action name in backticks.
 `check_rules.py` reads only those action names; the text after the dash is
