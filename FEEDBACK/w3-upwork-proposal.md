@@ -22,9 +22,11 @@ Task: build `skills/upwork-proposal/` on top of PR #1 (branch `w5-upwork-helper`
     then `fatal: Authentication failed for 'https://github.com/tobkorgjz-eng/bw-starter-lab.git/'`
   - REST GET pulls/1: `HTTP/2 401` with `"message": "Bad credentials"`
   - audit line: `401  GET https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab/pulls/1` (not blocked)
-- My guess: the github secret delegated to the manager is invalid or expired
-  upstream. A worker cannot fix that. I did not send a second request because
-  of the one-request rule.
+- Cause, confirmed by the manager: the project's GitHub secret itself is
+  invalid. It fails the same way for every box, the manager included, so the
+  routes and the approval are fine. Per the manager I did not send a second
+  access request. I committed locally and waited for a person to update the
+  secret.
 - ListAgents showed no reachable manager session, so I could not message the
   manager from the box.
 
