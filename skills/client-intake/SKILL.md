@@ -27,9 +27,10 @@ Do not use it to set up tools, connect accounts or write prompts. Those come lat
 
 ## Steps
 
-1. **Before the call.** Send the client the list of topics in `questions.md`
-   (section headings only) so they can think ahead. Tell them nothing will be
-   connected or changed during intake.
+1. **Before the call.** Draft a short message listing the section headings
+   of `questions.md` for the person running intake to send, so the client
+   can think ahead. Do not send it yourself. Say in the draft that nothing
+   will be connected or changed during intake.
 2. **Run the call.** Ask the questions in `questions.md` in order. Write the
    client's own words where you can. If they do not know an answer, write
    `unknown — ask again by <date>` rather than guessing.
@@ -45,16 +46,25 @@ Do not use it to set up tools, connect accounts or write prompts. Those come lat
    Keep it to one page. Each rules line must start with a short action name in
    backticks, in `snake_case`, then ` — ` and a plain description:
    `` - `send_email` — send any email to a customer. ``
+   Keep only rules lines inside the three lists; put notes elsewhere.
+   "Limits and exceptions" may only narrow the lists (for example "quotes
+   over 150 need the owner's yes"), never widen them. If a task should move
+   to a freer list, change the list itself.
 5. **Check it.** Run
    `python3 skills/client-intake/check_brief.py clients/<client-slug>/brief.md`.
    It reports missing sections, unfilled placeholders, badly formed rules
-   lines and any action that sits on two lists. Fix what it reports.
+   lines (whatever list marker is used), other text inside a rules list, any
+   action that sits on two lists, and warns when a "Limits and exceptions"
+   line says "without asking" or "alone". Fix what it reports.
 6. **Read it back.** Send the brief to the client and ask them to confirm or
    correct it, especially the three rules lists. Record the date and who
    confirmed it in the brief's "Sign-off" section. Until that is filled in,
    the brief is a draft.
-7. **Hand off.** Once confirmed, the `client-rules-file` skill reads the three
-   rules lists from the brief and writes the client's rules file.
+7. **Hand off.** Once confirmed, turn the brief into the answers file for
+   the `client-rules-file` skill with exactly this command:
+   `python3 skills/client-rules-file/rules_tool.py from-brief brief.md -o answers.json`
+   (use the brief's real path, for example `clients/<client-slug>/brief.md`).
+   That skill then writes the client's rules file from `answers.json`.
 
 ## Ground rules for the person running intake
 

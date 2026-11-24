@@ -49,6 +49,10 @@ Anything not listed needs the owner's yes.
 
 ## Limits and exceptions
 
+> Limits only narrow the three lists above, never widen them. Example:
+> "quotes over 150 need the owner's yes, not the backup's". If a task
+> should move to a freer list, change the list itself, not this section.
+
 - <amounts, after-hours rules, what to do if no answer comes>
 
 ## Information

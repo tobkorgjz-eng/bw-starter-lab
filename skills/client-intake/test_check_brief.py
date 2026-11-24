@@ -96,6 +96,61 @@ class TestProblems(unittest.TestCase):
         self.assertIn("first line should be '# Client brief: <business name>'",
                       problems)
 
+    def test_star_and_numbered_rules_are_read(self):
+        text = self.good.replace(
+            "- `share_credentials` — reveal passwords or login details.",
+            "- `share_credentials` — reveal passwords or login details.\n"
+            "* `sign_contract` — agree to a contract.\n"
+            "+ `change_permissions_plus` — give anyone more access.\n"
+            "1. `change_permissions` — give anyone more access.")
+        self.assertEqual(check_brief.check_brief(text), [])
+        rules = check_brief.parse_rules(check_brief.parse_sections(text))
+        for action in ("sign_contract", "change_permissions_plus",
+                       "change_permissions"):
+            self.assertIn(action, rules["Never does"])
+
+    def test_bad_star_and_numbered_lines_reported(self):
+        text = self.good.replace(
+            "- `share_credentials` — reveal passwords or login details.",
+            "- `share_credentials` — reveal passwords or login details.\n"
+            "* sign_contract: agree to a contract.\n"
+            "1. change permissions for anyone")
+        problems = check_brief.check_brief(text)
+        bad = [p for p in problems if "Never does: rules line not in the form" in p]
+        self.assertEqual(len(bad), 2, problems)
+
+    def test_other_text_in_rules_section_reported(self):
+        text = self.good.replace(
+            "- `share_credentials` — reveal passwords or login details.",
+            "- `share_credentials` — reveal passwords or login details.\n"
+            "Also never sign contracts.")
+        problems = check_brief.check_brief(text)
+        self.assertTrue(any("Never does: text that is not a rules line" in p
+                            for p in problems), problems)
+
+    def test_limits_widening_warns(self):
+        for phrase in ("Refunds of any size may be given without asking.",
+                       "Tomas may order parts alone on Saturdays."):
+            text = self.good.replace(
+                "- Quotes over 150 still need Priya's yes, not Tomas's.",
+                "- " + phrase)
+            problems = check_brief.check_brief(text)
+            self.assertTrue(any(p.startswith("warning: Limits and exceptions")
+                                for p in problems), (phrase, problems))
+
+    def test_limits_narrowing_no_warning(self):
+        problems = check_brief.check_brief(self.good)
+        self.assertFalse(any(p.startswith("warning:") for p in problems))
+
+    def test_skill_names_handoff_command(self):
+        self.assertIn("python3 skills/client-rules-file/rules_tool.py "
+                      "from-brief brief.md -o answers.json", read("SKILL.md"))
+
+    def test_skill_drafts_topics_message(self):
+        text = read("SKILL.md")
+        self.assertIn("Draft a short message", text)
+        self.assertNotIn("Send the client the list", text)
+
 
 class TestMain(unittest.TestCase):
     def run_main(self, argv):

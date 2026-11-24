@@ -3,8 +3,10 @@
 
 Usage: python3 check_brief.py BRIEF.md [--json]
 
-Reports missing sections, unfilled <placeholders>, badly formed rules lines,
-empty rules lists and actions listed on more than one rules list.
+Reports missing sections, unfilled <placeholders>, badly formed rules lines
+(any list marker: -, *, + or 1.), other text inside a rules list, empty rules
+lists, actions listed on more than one rules list, and warns when a "Limits
+and exceptions" line looks like it widens a list ("without asking", "alone").
 Exit status: 0 no problems, 1 problems found, 2 usage or file error.
 Stdlib only; reads one local file; makes no network calls.
 """
@@ -27,8 +29,12 @@ REQUIRED_SECTIONS = [
 ]
 RULES_SECTIONS = ["May do alone", "Needs the owner's yes", "Never does"]
 
-RULE_LINE = re.compile(r"^- `([a-z][a-z0-9_]*)` — \S.*$")
+LIST_MARKER = re.compile(r"^(?:[-*+]|\d+[.)])\s+")
+RULE_LINE = re.compile(r"^(?:[-*+]|\d+[.)])\s+`([a-z][a-z0-9_]*)` — \S.*$")
 PLACEHOLDER = re.compile(r"<[^<>\n]+>")
+# The one non-rule line allowed inside a rules section (from the template).
+DEFAULT_LINE = "Anything not listed needs the owner's yes."
+WIDENING = re.compile(r"without asking|\balone\b", re.IGNORECASE)
 
 
 def parse_sections(text):
@@ -78,7 +84,12 @@ def check_brief(text):
         count = 0
         for line in sections[name]:
             s = line.strip()
-            if not s.startswith("- "):
+            if not s or s == DEFAULT_LINE:
+                continue
+            if not LIST_MARKER.match(s):
+                problems.append(
+                    "%s: text that is not a rules line (put notes outside "
+                    "the rules lists): %s" % (name, s))
                 continue
             m = RULE_LINE.match(s)
             if not m:
@@ -97,6 +108,13 @@ def check_brief(text):
                 seen[action] = name
         if count == 0:
             problems.append("%s: no rules listed" % name)
+
+    for line in sections.get("Limits and exceptions", []):
+        s = line.strip()
+        if s and WIDENING.search(s):
+            problems.append(
+                "warning: Limits and exceptions may only narrow the rules "
+                "lists, never widen them; move this into the right list: " + s)
     return problems
 
 

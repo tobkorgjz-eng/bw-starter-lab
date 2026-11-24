@@ -43,3 +43,9 @@ Exact text from `GET https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab` 
 
 Manager's diagnosis: the 401 "Bad credentials" comes from the project's GitHub secret itself (it fails the same way for every box, the manager included), not from this box's routes. No second access request was sent; the box waited for a person to update the secret.
 - Resolved: after the secret was updated, the token was accepted at 16:56 UTC (about 20 minutes after the first 401); the branch was pushed and the PR opened with the same single approval.
+
+## Review fixes (W7 review on PR #6)
+
+- Fixed three findings: rules lines with any list marker, limits that only narrow the lists, and a drafted (not sent) topics message. Tests went from 18 to 25.
+- What went well: the review gave file:line, a way to reproduce, and the fix it wanted, so no back-and-forth was needed. The existing approval covered reading the review and posting the comment.
+- Time: reading the review ~3 min, code and tests ~8 min, cross-check with #7's `from-brief` ~2 min, comment ~2 min.
