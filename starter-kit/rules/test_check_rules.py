@@ -65,25 +65,54 @@ class CheckActionTest(unittest.TestCase):
     def test_needs_yes_without_approval(self):
         self.assertEqual(cr.check_action(self.rules, "send_email")[0], cr.ASK)
 
-    def test_needs_yes_with_approval(self):
-        self.assertEqual(cr.check_action(self.rules, "send_email", True)[0], cr.ALLOW)
+    def test_needs_yes_with_owner_approval(self):
+        self.assertEqual(
+            cr.check_action(self.rules, "send_email", {"send_email"})[0], cr.ALLOW)
 
-    def test_never_blocked_even_if_approved(self):
-        self.assertEqual(cr.check_action(self.rules, "delete_records", True)[0], cr.BLOCK)
+    def test_approval_is_per_action(self):
+        self.assertEqual(
+            cr.check_action(self.rules, "send_email", {"other_action"})[0], cr.ASK)
+
+    def test_never_blocked_even_if_owner_approved(self):
+        self.assertEqual(
+            cr.check_action(self.rules, "delete_records", {"delete_records"})[0], cr.BLOCK)
 
     def test_unknown_asks(self):
         self.assertEqual(cr.check_action(self.rules, "order_flowers")[0], cr.ASK)
-        self.assertEqual(cr.check_action(self.rules, "order_flowers", True)[0], cr.ALLOW)
+        self.assertEqual(
+            cr.check_action(self.rules, "order_flowers", {"order_flowers"})[0], cr.ALLOW)
 
 
 class CheckPlanTest(unittest.TestCase):
     def setUp(self):
         self.rules = cr.parse_rules(SAMPLE)
 
+    def test_self_approval_in_plan_is_ignored(self):
+        # The bot marks its own needs-yes action as approved; with no owner
+        # approval input it must still be ASK.
+        plan = [{"action": "send_email", "owner_approved": True}]
+        res = cr.check_plan(self.rules, plan)
+        self.assertEqual(res[0]["verdict"], cr.ASK)
+        self.assertIn("ignored", res[0]["reason"])
+        self.assertFalse(cr.all_allowed(res))
+
+    def test_self_approval_other_keys_ignored(self):
+        for key in ("approved", "approval"):
+            res = cr.check_plan(self.rules, [{"action": "send_email", key: True}])
+            self.assertEqual(res[0]["verdict"], cr.ASK)
+
+    def test_self_approval_on_unlisted_action_ignored(self):
+        res = cr.check_plan(self.rules, [{"action": "order_flowers", "owner_approved": True}])
+        self.assertEqual(res[0]["verdict"], cr.ASK)
+
+    def test_owner_approval_outside_plan_allows(self):
+        res = cr.check_plan(self.rules, [{"action": "send_email"}], ["send_email"])
+        self.assertEqual(res[0]["verdict"], cr.ALLOW)
+
     def test_mixed_plan(self):
-        plan = ["read_inbox", {"action": "send_email", "owner_approved": True},
+        plan = ["read_inbox", {"action": "send_email"},
                 "delete_records", " tag_message "]
-        verdicts = [r["verdict"] for r in cr.check_plan(self.rules, plan)]
+        verdicts = [r["verdict"] for r in cr.check_plan(self.rules, plan, ["send_email"])]
         self.assertEqual(verdicts, [cr.ALLOW, cr.ALLOW, cr.BLOCK, cr.ALLOW])
 
     def test_all_allowed(self):
@@ -96,10 +125,14 @@ class CheckPlanTest(unittest.TestCase):
         self.assertEqual(cr.check_plan(self.rules, []), [])
 
     def test_bad_plans(self):
-        for bad in [{"action": "x"}, [42], [{"owner_approved": True}], [""],
-                    [{"action": "send_email", "owner_approved": "yes"}]]:
+        for bad in [{"action": "x"}, [42], [{"owner_approved": True}], [""]]:
             with self.assertRaises(cr.RulesError):
                 cr.check_plan(self.rules, bad)
+
+    def test_bad_approvals(self):
+        for bad in [{"send_email": True}, "send_email", [42], [""]]:
+            with self.assertRaises(cr.RulesError):
+                cr.check_plan(self.rules, ["send_email"], bad)
 
     def test_format_summary(self):
         out = cr.format_results(cr.check_plan(self.rules, ["read_inbox", "delete_records"]))
@@ -107,7 +140,7 @@ class CheckPlanTest(unittest.TestCase):
 
 
 class MainTest(unittest.TestCase):
-    def _run(self, plan, rules_path=None):
+    def _run(self, plan, rules_path=None, approvals=None, extra=()):
         with tempfile.TemporaryDirectory() as d:
             p = os.path.join(d, "plan.json")
             with open(p, "w", encoding="utf-8") as fh:
@@ -116,6 +149,15 @@ class MainTest(unittest.TestCase):
                 else:
                     json.dump(plan, fh)
             argv = [p] + (["--rules", rules_path] if rules_path else [])
+            if approvals is not None:
+                a = os.path.join(d, "approvals.json")
+                with open(a, "w", encoding="utf-8") as fh:
+                    if isinstance(approvals, str):
+                        fh.write(approvals)
+                    else:
+                        json.dump(approvals, fh)
+                argv += ["--approvals", a]
+            argv += list(extra)
             out, err = io.StringIO(), io.StringIO()
             with redirect_stdout(out), redirect_stderr(err):
                 code = cr.main(argv)
@@ -131,6 +173,25 @@ class MainTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("BLOCK", out)
 
+    def test_self_approved_plan_still_asks(self):
+        code, out, _ = self._run([{"action": "send_email", "owner_approved": True}])
+        self.assertEqual(code, 1)
+        self.assertIn("ASK", out)
+
+    def test_owner_approvals_file(self):
+        code, out, _ = self._run([{"action": "send_email"}], approvals=["send_email"])
+        self.assertEqual(code, 0)
+
+    def test_owner_approve_flag(self):
+        code, _, _ = self._run(["send_email", "issue_refund"],
+                               extra=["--approve", "send_email", "--approve", "issue_refund"])
+        self.assertEqual(code, 0)
+
+    def test_exit_two_on_bad_approvals_file(self):
+        code, _, err = self._run(["send_email"], approvals="{not json")
+        self.assertEqual(code, 2)
+        self.assertIn("error", err)
+
     def test_exit_two_on_bad_json(self):
         code, _, err = self._run("{not json")
         self.assertEqual(code, 2)
@@ -141,11 +202,22 @@ class MainTest(unittest.TestCase):
         self.assertEqual(code, 2)
 
     def test_example_plan(self):
-        code_out = io.StringIO()
-        with redirect_stdout(code_out):
+        out = io.StringIO()
+        with redirect_stdout(out):
             code = cr.main([os.path.join(HERE, "example_plan.json")])
         self.assertEqual(code, 1)
-        self.assertIn("Summary: 3 allow, 2 ask, 1 block", code_out.getvalue())
+        self.assertIn("Summary: 2 allow, 3 ask, 1 block", out.getvalue())
+
+    def test_example_plan_with_owner_approvals(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = cr.main([os.path.join(HERE, "example_plan.json"),
+                            "--approvals", os.path.join(HERE, "example_owner_approvals.json")])
+        self.assertEqual(code, 1)
+        text = out.getvalue()
+        self.assertIn("Summary: 3 allow, 2 ask, 1 block", text)
+        # issue_refund was self-approved in the plan but not by the owner.
+        self.assertRegex(text, r"ASK\s+issue_refund")
 
 
 if __name__ == "__main__":

@@ -8,14 +8,17 @@ How the rules work:
 
 - **May do alone** — the assistant can do these without asking.
 - **Needs the owner's yes** — the assistant must ask first and wait for a
-  clear yes from the owner before acting.
+  clear yes from the owner before acting. The yes comes from the owner, not
+  the assistant: the assistant can never mark its own action as approved.
 - **Never does** — the assistant refuses these, even if asked.
 - Anything **not listed** is treated as *needs the owner's yes*. When in
   doubt, the assistant asks.
 
 Each rule is one bullet that starts with an action name in backticks.
 `check_rules.py` reads only those action names; the text after the dash is
-for people.
+for people. The owner's yes is given to `check_rules.py` separately from the
+assistant's plan (`--approvals FILE` or `--approve ACTION`); any approval
+the assistant writes into its own plan is ignored.
 
 ## May do alone
 
