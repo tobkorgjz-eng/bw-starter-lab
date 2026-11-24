@@ -18,7 +18,7 @@ Sources: the nine `FEEDBACK/*.md` files on this branch, the exact prompts in [`d
 | w7-reviewer | `w7-reviewer` | #8 (new) | Review comments on every PR, scan script in `tools/`, notes in `docs/reviews/` |
 | w8-scribe | `w8-scribe` | #9 (new) | This file, `docs/discobox-feedback.md`, the collected FEEDBACK files |
 
-Final combined check after the fix round: `Total: 10 folders, 10 passed, 0 failed, 288 tests`, offline (run by W7 and the manager, and again by the scribe; see section 8). The first run, before the review, was 206 tests. Each run used a local scratch merge that was thrown away and never pushed.
+Final combined check after the fix round: `Total: 10 folders, 10 passed, 0 failed, 288 tests` for the seven branches other than #9, offline (run by W7 and the manager). With #9 included it is `11 folders, 11 passed, 0 failed, 294 tests` (scribe, section 8). The first run, before the review, was 206 tests. Each run used a local scratch merge that was thrown away and never pushed.
 
 Nothing was merged into main. Nothing was pushed to main. No force push.
 
@@ -148,4 +148,22 @@ The whole run took about 55 minutes of wall clock (16:31 to 17:25 UTC), and abou
 
 ## 8. Final scratch merge (scribe)
 
-SCRATCH_RESULT_PLACEHOLDER
+After the last FEEDBACK pushes (W7 at `64f5ecf`, the manager's final file), the scribe made a scratch worktree from `origin/main` and ran `git merge` on all 8 branches, one after another: `w8-scribe`, `w1-skill-client-rules-file`, `w2-skill-client-intake`, `w5-upwork-helper`, `w3-demo-bots-booking`, `w4-demo-bots-faq`, `w2-starter-kit-templates`, `w7-reviewer`. **Every merge was clean, with no conflicts.** Then, with networking off:
+
+```
+$ unshare -rn python3 run_tests.py
+PASS  .  (9 tests)
+PASS  demo-bots/booking  (43 tests)
+PASS  demo-bots/faq  (38 tests)
+PASS  docs  (6 tests)
+PASS  skills/client-intake  (25 tests)
+PASS  skills/client-rules-file  (50 tests)
+PASS  skills/upwork-proposal  (28 tests)
+PASS  starter-kit/rules  (47 tests)
+PASS  starter-kit/templates/tests  (15 tests)
+PASS  tools  (16 tests)
+PASS  upwork-helper/tests  (17 tests)
+Total: 11 folders, 11 passed, 0 failed, 294 tests
+```
+
+294 = the 288 tests of the seven other branches plus the 6 docs tests on this branch. The scratch branch was local only; it was deleted and never pushed.
