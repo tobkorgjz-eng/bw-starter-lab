@@ -1,0 +1,11 @@
+Title: AI assistant for clinic booking and FAQ
+Client: Willowbrook Dental Studio (made-up)
+Budget: $1,200 fixed
+Skills: chatbot, booking, faq, python
+Description:
+We are a made-up two-chair dental studio. Our front desk spends hours each day
+answering the same questions about opening times, prices and insurance, and
+moving appointments around by phone. We want an AI assistant on our website
+that answers common questions from our own FAQ and offers open booking slots.
+It must ask a staff member before it confirms or cancels any appointment.
+Please include short documentation so our office manager can update the FAQ.

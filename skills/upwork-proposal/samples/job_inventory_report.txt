@@ -1,0 +1,8 @@
+Title: Best expert needed for inventory report automation proof of concept
+Client: Copperleaf Garden Supply (made-up)
+Budget: $35/hr
+Skills: python, automation, excel, power bi, sql server
+Description:
+Every Monday someone exports stock levels from our made-up shop system to
+Excel and builds a report by hand. We want a proof of concept that does this
+automatically and emails the report to two managers.
