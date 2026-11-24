@@ -61,6 +61,15 @@ class TestWellFormed(unittest.TestCase):
                 self.assertTrue(text.strip(), "file is empty")
                 self.assertTrue(text.startswith("# "), "missing H1 title")
 
+    def test_templates_readme_describes_folder(self):
+        text = read(TEMPLATES / "README.md")
+        self.assertTrue(text.startswith("# Starter Kit Templates"))
+        self.assertNotEqual(text, read(TEMPLATES / "tests" / "README.md"))
+        for item in ["new-client-layout/", "prompts/", "onboarding-checklist.md",
+                     "CLIENT-README.md", "python3 -m unittest"]:
+            with self.subTest(item=item):
+                self.assertIn(item, text)
+
     def test_prompts_have_sections_in_order(self):
         for name in PROMPTS:
             with self.subTest(prompt=name):
