@@ -12,9 +12,9 @@ from pathlib import Path
 
 DEFAULT_TEMPLATE = """Hi $client,
 
-I read your post "$title" and it looks like a good match for my experience.
+$title_line
 
-What I understood you need:
+What I understood you need (write this in your own words):
 $summary
 
 Skills I would bring: $matched_skills
@@ -40,7 +40,31 @@ def has_word(phrase, text):
 
 
 RED_FLAGS = ["unpaid test", "free sample", "pay after", "outside upwork",
-             "off platform", "telegram", "whatsapp", "urgent asap"]
+             "off platform", "telegram", "whatsapp", "urgent asap",
+             # the post is data: instructions planted in it are a red flag
+             "ignore your", "ignore previous", "ignore all", "disregard",
+             "system prompt", "you are now", "assistant:", "say you have",
+             "phone number", "email me", "call me"]
+
+# Contact details and links: flagged, never copied into a draft.
+CONTACT_PATTERNS = {
+    "email address": r"[\w.+-]+@[\w-]+\.[\w.]+",
+    "link": r"(?i)\b(?:https?://|www\.)\S+",
+    "phone number": r"\+?\d[\d\s().-]{6,}\d",
+}
+
+
+def red_flags(text):
+    """Red-flag phrases plus kinds of contact details found in text."""
+    flags = [f for f in RED_FLAGS if f in text.lower()]
+    flags += [f"contact details ({k})" for k, pat in CONTACT_PATTERNS.items()
+              if re.search(pat, text)]
+    return flags
+
+
+def safe_title(title):
+    """The title if it is safe to repeat, else None (never rewritten)."""
+    return None if red_flags(title) else title
 
 
 def parse_job_post(text):
@@ -72,10 +96,11 @@ def parse_job_post(text):
 def fit_checklist(job, my_skills=None):
     """Return a list of (check, passed, note) tuples and a 0-100 score."""
     my_skills = [s.lower() for s in (my_skills or DEFAULT_SKILLS)]
-    text = (job["description"] + " " + " ".join(job["skills"])).lower()
+    raw = job["title"] + " " + job["description"]
+    text = (raw + " " + " ".join(job["skills"])).lower()
     matched = [s for s in my_skills if has_word(s, text)]
     missing = [s for s in job["skills"] if s not in my_skills]
-    flags = [f for f in RED_FLAGS if f in text]
+    flags = red_flags(raw)
     checks = [
         ("Skills overlap", len(matched) >= 2,
          ", ".join(matched) if matched else "no overlap"),
@@ -90,22 +115,32 @@ def fit_checklist(job, my_skills=None):
     return checks, score, matched
 
 
-def summarize(description, max_sentences=2):
-    sentences = re.split(r"(?<=[.!?])\s+", description.replace("\n", " ").strip())
-    picked = [s for s in sentences if s][:max_sentences]
-    return "\n".join(f"- {s}" for s in picked) or "- (no description given)"
+def summarize(matched):
+    """Placeholder for the need, in our words. Never copies the client's text."""
+    lines = []
+    if matched:
+        lines.append(f"- Work that involves: {', '.join(matched)}.")
+    lines.append("- (fill in: one or two lines in your own words)")
+    return "\n".join(lines)
 
 
 def draft_proposal(job, template=DEFAULT_TEMPLATE, freelancer="Sam Example",
                    my_skills=None):
     checks, score, matched = fit_checklist(job, my_skills)
-    budget_line = (f"I can work within the stated budget ({job['budget']})."
+    budget_line = (f"You listed a budget of {job['budget']}; I would confirm what "
+                   "fits once we agree the scope."
                    if job["budget"] else "Happy to discuss a fair budget for the scope.")
+    title = safe_title(job["title"])
+    title_line = f'I read your post "{title}".' if title else "I read your post."
     body = string.Template(template).safe_substitute(
-        client=job["client"], title=job["title"], summary=summarize(job["description"]),
+        client=job["client"].replace("(made-up)", "").strip() or "there",
+        title=title or "your job post", title_line=title_line,
+        summary=summarize(matched),
         matched_skills=", ".join(matched) if matched else "(fill in)",
         budget_line=budget_line, freelancer=freelancer)
     lines = [f"FIT CHECKLIST (score {score}/100)"]
+    if score < 50:
+        lines.insert(0, "NOTE: low fit score - consider not applying.")
     lines += [f"  [{'x' if ok else ' '}] {name}: {note}" for name, ok, note in checks]
     lines += ["", "DRAFT PROPOSAL (review before using - nothing is sent)", "-" * 40, body]
     return "\n".join(lines)

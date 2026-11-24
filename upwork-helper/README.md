@@ -15,7 +15,15 @@ Python 3 standard library only.
 
 Job post format: `Title:`, `Client:`, `Budget:`, `Skills:` (comma list) header
 lines, then `Description:` followed by free text. Custom templates use
-`$client`, `$title`, `$summary`, `$matched_skills`, `$budget_line`, `$freelancer`.
+`$client`, `$title`, `$title_line`, `$summary`, `$matched_skills`, `$budget_line`, `$freelancer`.
+
+The job post is treated as data. Red flags are checked in the title and the
+description, including instructions planted for an assistant and contact
+details or links. A title with a red flag is not quoted (`$title` becomes
+"your job post"). The draft never copies sentences from the post: `$summary`
+is a placeholder for you to fill in your own words. A score under 50 adds a
+"consider not applying" note. For the Blade Works 1-5 skill, see
+`skills/upwork-proposal/`.
 
 The `samples/` job posts and businesses are made up.
 
