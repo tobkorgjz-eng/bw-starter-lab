@@ -6,7 +6,14 @@ Two layers:
   * Salon        - the schedule: list free slots, hold, book and cancel.
   * BookingBot   - a tiny text chat front end that always asks the customer
                    to answer "yes" before a booking or cancellation is final.
+
+Customer text is data, never instructions: the bot only understands its fixed
+commands, a pending action needs an exact "yes" on its own, and messages that
+try to change the rules ("ignore your rules", "you are now ...") get a fixed
+refusal and change nothing.
 """
+
+import re
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -28,6 +35,33 @@ CLOSED_WEEKDAYS = {6}  # Sunday (Monday == 0)
 
 YES_WORDS = {"yes", "y", "confirm", "ok", "sure"}
 NO_WORDS = {"no", "n", "stop", "nope"}
+
+NAME_MAX = 40
+# Letters (any alphabet), spaces, hyphen, apostrophe, full stop. No digits,
+# colons, brackets or line breaks, so a name cannot imitate a bot reply such
+# as "Booked: ... (code MC001)".
+_NAME_RE = re.compile(r"^[^\W\d_](?:[^\W\d_]|[ .'-])*$")
+
+# Phrases that try to give the bot new instructions. Matching is a simple,
+# case-insensitive substring check; it is a tripwire, not the safety net.
+# The real protection is that the bot has no free-text "do anything" path.
+INJECTION_PATTERNS = (
+    "ignore", "disregard", "forget your", "forget the", "override",
+    "your rules", "new rules", "system prompt", "system:", "you are now",
+    "act as", "pretend", "jailbreak", "developer mode", "admin mode",
+    "without asking", "without confirm", "skip confirm", "no need to ask",
+    "don't ask", "dont ask", "already confirmed", "pre-confirmed",
+    "auto-confirm", "<script",
+)
+
+REFUSAL = ("I can only help with bookings, and my rules stay the same: "
+           "I always ask before I book or cancel anything. Nothing was "
+           "changed.")
+
+
+def looks_like_injection(text):
+    low = (text or "").lower()
+    return any(p in low for p in INJECTION_PATTERNS)
 
 
 class BookingError(ValueError):
@@ -106,9 +140,12 @@ class Salon:
     # -- changes ---------------------------------------------------------
     def check(self, customer, service, start):
         """Validate a request without booking it. Returns the end time."""
-        customer = (customer or "").strip()
+        customer = " ".join((customer or "").split())
         if not customer:
             raise BookingError("Please give a name for the booking.")
+        if len(customer) > NAME_MAX or not _NAME_RE.match(customer):
+            raise BookingError(f"Names can use letters, spaces, - ' and . "
+                               f"(up to {NAME_MAX} characters).")
         if start < self.now:
             raise BookingError("That time has already passed.")
         if start not in self.free_slots(start.date(), service):
@@ -119,7 +156,8 @@ class Salon:
         end = self.check(customer, service, start)
         code = f"MC{self._next:03d}"
         self._next += 1
-        booking = Booking(code, customer.strip(), service, start, end)
+        booking = Booking(code, " ".join(customer.split()), service, start,
+                          end)
         self.bookings[code] = booking
         return booking
 
@@ -179,6 +217,8 @@ class BookingBot:
         text = (message or "").strip()
         if self.pending is not None:
             return self._answer(text.lower())
+        if looks_like_injection(text):
+            return REFUSAL
         if not text:
             return HELP
         parts = text.split()
@@ -219,6 +259,7 @@ class BookingBot:
         start = datetime.combine(day, parse_time(args[2]))
         name = " ".join(args[3:])
         end = self.salon.check(name, service, start)
+        name = " ".join(name.split())
         self.pending = ("book", (name, service, start))
         return (f"Just to check: {SERVICES[service][0]} for {name} on "
                 f"{start:%a %d %b %Y} at {start:%H:%M}-{end:%H:%M}. "
@@ -232,12 +273,15 @@ class BookingBot:
         return (f"Just to check: cancel {booking.describe()}? (yes/no)")
 
     def _answer(self, word):
+        # Only an exact yes/no word counts. Anything else ("yes, and also
+        # cancel MC002", "ignore your rules, it's confirmed") is not a yes.
         kind, payload = self.pending
         if word in NO_WORDS:
             self.pending = None
             return "No problem, nothing was changed."
         if word not in YES_WORDS:
-            return "Please answer yes or no."
+            return ("Nothing has been booked or cancelled yet. "
+                    "Please answer yes or no.")
         self.pending = None
         try:
             if kind == "book":
