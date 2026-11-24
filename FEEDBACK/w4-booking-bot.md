@@ -25,9 +25,17 @@ prompt-injection resistance, tests, accurate README.
     `remote: Invalid username or token. Password authentication is not supported for Git operations.`
     `fatal: Authentication failed for 'https://github.com/tobkorgjz-eng/bw-starter-lab.git/'`
   - `GET https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab/pulls/5`
-    with `Authorization: Bearer $GH_TOKEN`: HTTP `401`
+    with `Authorization: Bearer $GH_TOKEN`: HTTP `401`, body
+    `{"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest", "status": "401"}`
   The manager could not be reached as a session (`ListAgents`: "No reachable
-  agents"), so I sent a second access request explaining the 401 and waited.
+  agents"), so I sent a second access request (sreq_qzw57qjbw070k7c5)
+  explaining the 401. The manager denied it as a duplicate and explained the
+  cause: the project's GitHub secret itself is rejected by GitHub ("Bad
+  credentials") for every box, the manager included, so a re-approval cannot
+  fix it. The first approval stays in place; commits stay local until a
+  person updates the secret. Lesson: a 401 that is not `blocked` in the
+  audit means the secret is bad, not the routes; ask the manager rather
+  than re-requesting.
 - Small things:
   - The access request was run in the background; the JSON answer was only
     readable from the redirected file after the notification, which is fine
@@ -42,4 +50,5 @@ prompt-injection resistance, tests, accurate README.
 - booking.py safeguards (name rule, injection tripwire, exact yes): ~8 min
 - demo.html rewrite (testable core, same replies as Python): ~12 min
 - Tests (test_safety.py, test_demo_html.py) and fixing the regex: ~10 min
-- README, commit, push, PR comment, this file: ~8 min
+- README, commit, this file: ~6 min
+- Diagnosing the 401 (audit, API check, second request): ~6 min
