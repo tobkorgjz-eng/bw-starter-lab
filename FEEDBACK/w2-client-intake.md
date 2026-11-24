@@ -42,3 +42,4 @@ Exact text from `GET https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab` 
 - What would help: Git not having to be told how to use GH_TOKEN (a credential helper set up in the box by default), and a clearer sign of whether the secret bound to a grant is a valid GitHub token before the grant is marked done.
 
 Manager's diagnosis: the 401 "Bad credentials" comes from the project's GitHub secret itself (it fails the same way for every box, the manager included), not from this box's routes. No second access request was sent; the box waited for a person to update the secret.
+- Resolved: after the secret was updated, the token was accepted at 16:56 UTC (about 20 minutes after the first 401); the branch was pushed and the PR opened with the same single approval.
