@@ -16,6 +16,19 @@ Task: finish demo-bots/faq/ on the existing PR #2 (branch w4-demo-bots-faq).
   offline against the Python bot. The test skips when node is missing.
 
 ## What got in the way
+- **Blocking: push and PR comment failed.** The access request was granted
+  (`discobox-access list` shows `github (GH_TOKEN → github.com, api.github.com)
+  [expires 2026-11-24T18:36:41Z]`) and the egress did not block anything
+  (`discobox-access audit` shows status 401, `blocked: false`), but GitHub
+  rejects the credential behind the stand-in. Verbatim:
+  - `git push`: `remote: Invalid username or token. Password authentication is not supported for Git operations.`
+    then `fatal: Authentication failed for 'https://github.com/tobkorgjz-eng/bw-starter-lab.git/'`
+  - REST `GET /repos/tobkorgjz-eng/bw-starter-lab`: `{"message": "Bad credentials", "status": "401"}`
+  This looks like the delegated GitHub secret upstream is expired or revoked.
+  Because of the one-approval rule I did not ask again and did not try any
+  workaround. The commits are on the local branch, ready to push.
+- The manager box was not reachable from this box (`ListAgents`: no reachable
+  agents), so I could only report this here and in my final message.
 - Nothing blocking. One self-inflicted bug: with `node -e`, the first
   extra argument is `process.argv[1]`, not `argv[2]`. Error text, verbatim:
   `TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of Buffer or URL. Received undefined`
