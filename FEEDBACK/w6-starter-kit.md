@@ -30,6 +30,12 @@
   The manager confirmed this is the project's GitHub secret itself (it fails
   for every box, manager included), not the routes; no second access request
   was sent. Work was committed locally while waiting for a person to update it.
+- After the secret was fixed, my first push retries still failed because
+  `eval "$(discobox-access env)"` had been run in an earlier tool call and
+  shell state does not carry between calls, so `GH_TOKEN` was empty. Exact
+  error text: `fatal: could not read Username for 'https://github.com': terminal prompts disabled`.
+  Fix: run the `eval` in the same command as the push. (My mistake; easy to
+  hit.)
 
 ## Rough time per part
 - Fetch, identity check, checkout, merge #3 into #4: ~3 min
@@ -40,5 +46,7 @@
   client README, starter-kit README, root README): ~8 min
 - Access request: ~1 min to write; answered by the manager in a few minutes
   (granted, 2 hours, routes as asked)
-- Push and PR comments: ~5 min spent finding out why pushing failed (401 from GitHub); not done
+- Push and PR comments: ~5 min on the bad-secret 401; ~17 min waiting for a
+  person to update the secret; ~4 min on the empty-variable retry; then push
+  and both comments in ~1 min
 - FEEDBACK file: ~3 min
