@@ -27,6 +27,9 @@ Task: finish demo-bots/faq/ on the existing PR #2 (branch w4-demo-bots-faq).
   This looks like the delegated GitHub secret upstream is expired or revoked.
   Because of the one-approval rule I did not ask again and did not try any
   workaround. The commits are on the local branch, ready to push.
+  The manager confirmed it is the project's GitHub secret itself (it fails
+  for every box, manager included), not the routes, and said to wait for a
+  person to update the secret, then retry.
 - The manager box was not reachable from this box (`ListAgents`: no reachable
   agents), so I could only report this here and in my final message.
 - Nothing blocking. One self-inflicted bug: with `node -e`, the first
