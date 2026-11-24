@@ -27,3 +27,23 @@ Unknown fields are ignored, so an intake file with extra answers can be
 passed in as is.
 
 Example: [examples/maple-lane-bakery/answers.json](examples/maple-lane-bakery/answers.json).
+
+## From a client-intake brief
+
+`rules_tool.py from-brief BRIEF.md -o answers.json` builds this file from
+a brief in the client-intake format (`skills/client-intake/`):
+
+| Brief | Answers field |
+| --- | --- |
+| `# Client brief: <name>` | `business_name` |
+| `- Owner / final yes: <name>, <role>` (People) | `owner_name` (text before the comma) |
+| `- How to ask for a yes: …` (People) | `ask_channel` |
+| `- What it does: …` (Business) | `business_type` |
+| `## May do alone` | `may_do_alone` |
+| `## Needs the owner's yes` | `ask_first` |
+| `## Never does` | `never_do` |
+| `- Backup yes: …`, `## Limits and exceptions` | `notes` |
+
+A brief item like `` `offer_discount` — offer any discount `` becomes
+"Offer any discount (offer_discount)". Test fixture:
+[fixtures/brief-willowbrook-dog-grooming.md](fixtures/brief-willowbrook-dog-grooming.md).

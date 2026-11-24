@@ -157,7 +157,86 @@ class ExampleTests(unittest.TestCase):
                 self.assertEqual(rules_tool.check_rules(saved), ([], []))
 
 
+BRIEF = os.path.join(HERE, "fixtures", "brief-willowbrook-dog-grooming.md")
+
+
+def read_brief():
+    with open(BRIEF, encoding="utf-8") as fh:
+        return fh.read()
+
+
+class FromBriefTests(unittest.TestCase):
+    def test_names_and_lists_are_read(self):
+        answers, warnings = rules_tool.answers_from_brief(read_brief())
+        self.assertEqual(warnings, [])
+        self.assertEqual(answers["business_name"], "Willowbrook Dog Grooming")
+        self.assertEqual(answers["owner_name"], "Jun Halloway")
+        self.assertTrue(answers["ask_channel"].startswith("text message"))
+        self.assertEqual(len(answers["may_do_alone"]), 3)
+        self.assertEqual(len(answers["never_do"]), 2)
+
+    def test_needs_owners_yes_becomes_ask_first(self):
+        answers, _ = rules_tool.answers_from_brief(read_brief())
+        self.assertEqual(answers["ask_first"], [
+            "Put a grooming booking on the calendar (book_appointment)",
+            "Offer any discount or free extra (offer_discount)",
+        ])
+        text = rules_tool.build_rules(answers)
+        ask = rules_tool.parse_rules(text)[1][rules_tool.SECTION_ASK]
+        self.assertIn("Offer any discount or free extra (offer_discount)", ask)
+
+    def test_backup_yes_and_limits_go_to_notes(self):
+        answers, _ = rules_tool.answers_from_brief(read_brief())
+        self.assertIn("Backup yes: Mira Stone", answers["notes"])
+        self.assertIn("After 18:00: drafts only.", answers["notes"])
+
+    def test_brief_to_rules_passes_check(self):
+        answers, _ = rules_tool.answers_from_brief(read_brief())
+        errors, _ = rules_tool.check_rules(rules_tool.build_rules(answers))
+        self.assertEqual(errors, [])
+
+    def test_unconfirmed_brief_warns(self):
+        text = read_brief().replace("Status: confirmed", "Status: draft")
+        _, warnings = rules_tool.answers_from_brief(text)
+        self.assertTrue(any("confirmed" in w for w in warnings))
+
+    def test_missing_owner_or_section_is_refused(self):
+        text = read_brief().replace("- Owner / final yes: Jun Halloway, owner\n", "")
+        with self.assertRaisesRegex(rules_tool.AnswersError, "Owner / final yes"):
+            rules_tool.answers_from_brief(text)
+        text = read_brief().replace("## Never does", "## Other")
+        with self.assertRaisesRegex(rules_tool.AnswersError, "Never does"):
+            rules_tool.answers_from_brief(text)
+
+    def test_not_a_brief_is_refused(self):
+        with self.assertRaises(rules_tool.AnswersError):
+            rules_tool.answers_from_brief("# Something else\n")
+
+    def test_plain_items_are_kept(self):
+        self.assertEqual(rules_tool._brief_item("Answer the phone"), "Answer the phone")
+
+    def test_risky_brief_item_alone_is_caught(self):
+        text = read_brief().replace(
+            "- `draft_reply`", "- `issue_refund` — give a refund.\n- `draft_reply`", 1)
+        answers, _ = rules_tool.answers_from_brief(text)
+        errors, _ = rules_tool.check_rules(rules_tool.build_rules(answers))
+        self.assertTrue(any("risky action" in e for e in errors))
+
+
 class CliTests(unittest.TestCase):
+    def test_from_brief_then_build_then_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            answers = os.path.join(tmp, "answers.json")
+            rules = os.path.join(tmp, "RULES.md")
+            self.assertEqual(run_cli("from-brief", BRIEF, "-o", answers)[0], 0)
+            with open(answers, encoding="utf-8") as fh:
+                self.assertEqual(json.load(fh)["owner_name"], "Jun Halloway")
+            self.assertEqual(run_cli("build", answers, "-o", rules)[0], 0)
+            self.assertEqual(run_cli("check", rules)[0], 0)
+
+    def test_from_brief_bad_input_exit_2(self):
+        self.assertEqual(run_cli("from-brief", "/nonexistent/brief.md")[0], 2)
+
     def test_build_then_check(self):
         with tempfile.TemporaryDirectory() as tmp:
             answers = os.path.join(tmp, "answers.json")

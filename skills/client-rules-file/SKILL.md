@@ -22,9 +22,9 @@ stricter list wins.
 
 ## Input
 
-A JSON answers file. The client-intake skill (`skills/client-intake/`)
-collects these answers; if its output is markdown, copy the answers into
-this shape. Full field list: [INPUT-FORMAT.md](INPUT-FORMAT.md).
+A JSON answers file, or a client brief from the client-intake skill
+(`skills/client-intake/`), which `from-brief` turns into the answers file.
+Full field list: [INPUT-FORMAT.md](INPUT-FORMAT.md).
 
 ```json
 {
@@ -37,7 +37,14 @@ Optional: `business_type`, `answer_wait`, `notes`.
 
 ## Steps
 
-1. **Read the answers.** Open the answers file. If a required field is
+1. **Read the answers.** If you have a client brief (`BRIEF.md` from the
+   client-intake skill), turn it into an answers file first:
+   `python3 skills/client-rules-file/rules_tool.py from-brief BRIEF.md -o answers.json`
+   It reads the business name (title), the owner (`Owner / final yes`), how
+   to ask (`How to ask for a yes`) and the three lists. The brief's
+   "Needs the owner's yes" becomes "Must ask first"; backup yes and
+   "Limits and exceptions" go into notes. It warns if the brief's Status is
+   not `confirmed`. Then open the answers file. If a required field is
    missing or empty, stop and ask the person running the intake; do not
    guess an owner name or an ask channel.
 2. **Sort each action into one list.** Use the client's own words. If the

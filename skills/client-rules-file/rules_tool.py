@@ -3,12 +3,17 @@
 
 Stdlib only. No network calls.
 
+  python3 rules_tool.py from-brief BRIEF.md [-o ANSWERS.json]
   python3 rules_tool.py build ANSWERS.json [-o RULES.md]
   python3 rules_tool.py check RULES.md
 
 `build` turns intake answers (JSON, format in INPUT-FORMAT.md) into a
 markdown rules file with three lists: what the assistant may do alone,
 what it must ask first, and what it never does.
+
+`from-brief` reads a client-intake brief (skills/client-intake/) and
+writes the answers JSON that `build` takes. "Needs the owner's yes" in
+the brief becomes "Must ask first".
 
 `check` reads a rules file and reports problems. Exit code 0 means no
 errors (warnings may still be printed); 1 means at least one error;
@@ -120,6 +125,78 @@ def build_rules(answers):
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------- from-brief
+
+BRIEF_TITLE_PREFIX = "# Client brief: "
+# Brief section headings (skills/client-intake/) -> answer keys.
+BRIEF_SECTIONS = {
+    "May do alone": "may_do_alone",
+    "Needs the owner's yes": "ask_first",
+    "Never does": "never_do",
+}
+BRIEF_ITEM_RE = re.compile(r"^`(?P<id>[^`]+)`\s*(?:—|–|-|:)\s*(?P<text>.+)$")
+
+
+def _brief_item(item):
+    """'`book_appointment` — put a booking on ...' -> 'Put a booking on ... (book_appointment)'."""
+    match = BRIEF_ITEM_RE.match(item.strip())
+    if not match:
+        return item.strip()
+    text = match.group("text").strip().rstrip(".")
+    return f"{text[:1].upper()}{text[1:]} ({match.group('id').strip()})"
+
+
+def _field(lines, label):
+    """Value of a '- Label: value' bullet, or None."""
+    for line in lines:
+        if line.lower().startswith(label.lower() + ":"):
+            return line.split(":", 1)[1].strip() or None
+    return None
+
+
+def answers_from_brief(text):
+    """Return (answers dict, warnings) for the text of a client-intake brief."""
+    warnings = []
+    first = next((l.strip() for l in text.splitlines() if l.strip()), "")
+    if not first.startswith(BRIEF_TITLE_PREFIX):
+        raise AnswersError(f"brief must start with '{BRIEF_TITLE_PREFIX}<business>'")
+    name = first[len(BRIEF_TITLE_PREFIX):].strip()
+
+    status = re.search(r"^Status:\s*(.+)$", text, re.M)
+    if not status or status.group(1).strip().lower() != "confirmed":
+        warnings.append("brief Status is not 'confirmed'; get the owner's "
+                        "sign-off before using the rules file")
+
+    _, sections, _ = parse_rules(text)
+    people = sections.get("People", [])
+    owner = _field(people, "Owner / final yes")
+    if owner:
+        owner = owner.split(",")[0].strip()
+    channel = _field(people, "How to ask for a yes")
+    missing = [label for label, value in
+               (("Owner / final yes", owner), ("How to ask for a yes", channel))
+               if not value]
+    missing += [f"## {h}" for h in BRIEF_SECTIONS if h not in sections]
+    if missing:
+        raise AnswersError("brief is missing: " + ", ".join(missing))
+
+    answers = {"business_name": name, "owner_name": owner, "ask_channel": channel}
+    what = _field(sections.get("Business", []), "What it does")
+    if what:
+        answers["business_type"] = what.rstrip(".")
+    for heading, key in BRIEF_SECTIONS.items():
+        answers[key] = [_brief_item(i) for i in sections[heading]]
+
+    notes = []
+    backup = _field(people, "Backup yes")
+    if backup:
+        notes.append(f"Backup yes: {backup}")
+    notes += sections.get("Limits and exceptions", [])
+    if notes:
+        answers["notes"] = "\n".join(f"- {n}" for n in notes)
+    return answers, warnings
+
+
 # ---------------------------------------------------------------- check
 
 def parse_rules(text):
@@ -215,9 +292,30 @@ def main(argv=None):
     p_build = sub.add_parser("build", help="answers JSON -> rules markdown")
     p_build.add_argument("answers")
     p_build.add_argument("-o", "--output", help="write here (default stdout)")
+    p_brief = sub.add_parser("from-brief",
+                             help="client-intake brief markdown -> answers JSON")
+    p_brief.add_argument("brief")
+    p_brief.add_argument("-o", "--output", help="write here (default stdout)")
     p_check = sub.add_parser("check", help="check a rules markdown file")
     p_check.add_argument("rules")
     args = parser.parse_args(argv)
+
+    if args.command == "from-brief":
+        try:
+            with open(args.brief, encoding="utf-8") as fh:
+                answers, warnings = answers_from_brief(fh.read())
+        except (OSError, AnswersError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        out = json.dumps(answers, indent=2, ensure_ascii=False) + "\n"
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as fh:
+                fh.write(out)
+        else:
+            sys.stdout.write(out)
+        for w in warnings:
+            print(f"warning: {w}", file=sys.stderr)
+        return 0
 
     if args.command == "build":
         try:
