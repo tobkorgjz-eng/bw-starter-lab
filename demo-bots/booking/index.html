@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maple Comb Studio - Booking Demo</title>
+<style>
+  :root { --bg:#f7f4ef; --card:#fff; --ink:#2b2622; --muted:#7a6f66; --accent:#8a5a2b; --bot:#efe7dd; --me:#8a5a2b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--ink); padding:24px 16px; }
+  main { max-width:560px; margin:0 auto; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  p.sub { margin:0 0 16px; color:var(--muted); }
+  #log { background:var(--card); border-radius:12px; padding:14px; height:420px; overflow-y:auto; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .msg { white-space:pre-wrap; padding:8px 12px; border-radius:10px; margin:6px 0; max-width:88%; }
+  .bot { background:var(--bot); }
+  .me { background:var(--me); color:#fff; margin-left:auto; }
+  form { display:flex; gap:8px; margin-top:10px; }
+  input { flex:1; min-width:0; padding:10px; border:1px solid #d8cfc5; border-radius:8px; font:inherit; }
+  button { padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .chips button { background:#e4d8ca; color:var(--ink); padding:6px 10px; font-size:13px; }
+  footer { margin-top:16px; color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Maple Comb Studio</h1>
+  <p class="sub">Booking helper demo &middot; made-up salon &middot; runs fully in your browser</p>
+  <div id="log" aria-live="polite"></div>
+  <form id="f"><input id="q" autocomplete="off" placeholder="Type a command, e.g. services"><button>Send</button></form>
+  <div class="chips" id="chips"></div>
+  <footer>Demo only. Nothing is sent anywhere; bookings vanish when you reload. Mirrors booking.py.</footer>
+</main>
+<script>
+(function () {
+  "use strict";
+  var SERVICES = { haircut:["Haircut",30], wash:["Wash and blow-dry",30], color:["Colour",90], trim:["Beard or fringe trim",15] };
+  var OPEN = 9*60, CLOSE = 17*60, STEP = 15, CLOSED_DAY = 0; // JS Sunday == 0
+  var YES = ["yes","y","confirm","ok","sure"], NO = ["no","n","stop","nope"];
+  var HELP = "I can help with:\n  services\n  slots <service> <date>\n  book <service> <date> <HH:MM> <your name>\n  cancel <code>\nDates: YYYY-MM-DD, today or tomorrow.";
+  var bookings = {}, next = 1, pending = null;
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  function pad(n){ return (n<10?"0":"")+n; }
+  function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function hm(m){ return pad(Math.floor(m/60))+":"+pad(m%60); }
+  function nice(d){ return d.toDateString(); }
+  function Err(m){ this.message = m; }
+
+  function parseDay(t){
+    t = t.toLowerCase();
+    if (t === "today") return new Date(today);
+    if (t === "tomorrow") { var d = new Date(today); d.setDate(d.getDate()+1); return d; }
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
+    if (!m) throw new Err("Dates look like 2030-01-15, 'today' or 'tomorrow'.");
+    var d2 = new Date(+m[1], +m[2]-1, +m[3]);
+    if (iso(d2) !== t) throw new Err("Dates look like 2030-01-15, 'today' or 'tomorrow'.");
+    return d2;
+  }
+  function parseTime(t){
+    var m = /^(\d{1,2}):(\d{2})$/.exec(t);
+    if (!m || +m[1] > 23 || +m[2] > 59) throw new Err("Times look like 10:30.");
+    return (+m[1])*60 + (+m[2]);
+  }
+  function freeSlots(day, svc){
+    if (!SERVICES[svc]) throw new Err("Unknown service '"+svc+"'. Try one of: "+Object.keys(SERVICES).join(", ")+".");
+    if (day.getDay() === CLOSED_DAY || day < today) return [];
+    var len = SERVICES[svc][1], key = iso(day), out = [];
+    for (var s = OPEN; s + len <= CLOSE; s += STEP) {
+      var clash = Object.keys(bookings).some(function(c){ var b = bookings[c]; return b.day === key && s < b.end && b.start < s+len; });
+      if (!clash) out.push(s);
+    }
+    return out;
+  }
+  function check(name, svc, day, start){
+    if (!name.trim()) throw new Err("Please give a name for the booking.");
+    if (freeSlots(day, svc).indexOf(start) < 0) throw new Err("That time is not available.");
+    return start + SERVICES[svc][1];
+  }
+  function describe(b){ return SERVICES[b.svc][0]+" for "+b.name+" on "+nice(b.date)+" at "+hm(b.start)+"-"+hm(b.end)+" (code "+b.code+")"; }
+  function getBooking(code){ var b = bookings[(code||"").toUpperCase()]; if (!b) throw new Err("No booking found with code '"+code+"'."); return b; }
+
+  function handle(text){
+    text = text.trim();
+    if (pending) {
+      var w = text.toLowerCase(), p = pending;
+      if (NO.indexOf(w) >= 0) { pending = null; return "No problem, nothing was changed."; }
+      if (YES.indexOf(w) < 0) return "Please answer yes or no.";
+      pending = null;
+      try {
+        if (p.kind === "book") {
+          var end = check(p.name, p.svc, p.date, p.start);
+          var code = "MC" + ("00"+next++).slice(-3);
+          var b = { code:code, name:p.name.trim(), svc:p.svc, date:p.date, day:iso(p.date), start:p.start, end:end };
+          bookings[code] = b;
+          return "Booked: " + describe(b) + ".";
+        }
+        var c = getBooking(p.code); delete bookings[c.code];
+        return "Cancelled: " + describe(c) + ".";
+      } catch (e) { if (e instanceof Err) return "Sorry: " + e.message; throw e; }
+    }
+    if (!text) return HELP;
+    var parts = text.split(/\s+/), cmd = parts[0].toLowerCase(), a = parts.slice(1);
+    try {
+      if (cmd === "help" || cmd === "hi" || cmd === "hello") return HELP;
+      if (cmd === "services") return Object.keys(SERVICES).map(function(k){ return "  "+k+": "+SERVICES[k][0]+" ("+SERVICES[k][1]+" min)"; }).join("\n");
+      if (cmd === "slots") {
+        if (a.length !== 2) throw new Err("Use: slots <service> <date>");
+        var svc = a[0].toLowerCase(), day = parseDay(a[1]), s = freeSlots(day, svc);
+        if (!s.length) return "No free "+svc+" slots on "+nice(day)+".";
+        return "Free "+svc+" slots on "+nice(day)+": "+s.map(hm).join(", ");
+      }
+      if (cmd === "book") {
+        if (a.length < 4) throw new Err("Use: book <service> <date> <HH:MM> <name>");
+        var bs = a[0].toLowerCase(), bd = parseDay(a[1]), st = parseTime(a[2]), nm = a.slice(3).join(" ");
+        var en = check(nm, bs, bd, st);
+        pending = { kind:"book", name:nm, svc:bs, date:bd, start:st };
+        return "Just to check: "+SERVICES[bs][0]+" for "+nm+" on "+nice(bd)+" at "+hm(st)+"-"+hm(en)+". Shall I book it? (yes/no)";
+      }
+      if (cmd === "cancel") {
+        if (a.length !== 1) throw new Err("Use: cancel <code>");
+        var bk = getBooking(a[0]);
+        pending = { kind:"cancel", code:bk.code };
+        return "Just to check: cancel "+describe(bk)+"? (yes/no)";
+      }
+    } catch (e) { if (e instanceof Err) return "Sorry: " + e.message; throw e; }
+    return "I didn't catch that.\n" + HELP;
+  }
+
+  var log = document.getElementById("log"), q = document.getElementById("q");
+  function say(text, who){ var d = document.createElement("div"); d.className = "msg " + who; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; }
+  function send(text){ say(text, "me"); say(handle(text), "bot"); }
+  document.getElementById("f").addEventListener("submit", function(ev){ ev.preventDefault(); if (q.value.trim()) send(q.value); q.value = ""; q.focus(); });
+
+  var tmr = new Date(today); tmr.setDate(tmr.getDate()+1);
+  if (tmr.getDay() === CLOSED_DAY) tmr.setDate(tmr.getDate()+1);
+  var t = iso(tmr);
+  ["services", "slots haircut "+t, "book haircut "+t+" 10:00 Demo Customer", "yes", "no", "cancel MC001"].forEach(function(c){
+    var b = document.createElement("button"); b.type = "button"; b.textContent = c;
+    b.addEventListener("click", function(){ send(c); }); document.getElementById("chips").appendChild(b);
+  });
+  say("Hi! This is the Maple Comb Studio booking helper.\n" + HELP, "bot");
+})();
+</script>
+</body>
+</html>
