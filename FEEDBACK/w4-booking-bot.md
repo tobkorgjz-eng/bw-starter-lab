@@ -52,3 +52,6 @@ prompt-injection resistance, tests, accurate README.
 - Tests (test_safety.py, test_demo_html.py) and fixing the regex: ~10 min
 - README, commit, this file: ~6 min
 - Diagnosing the 401 (audit, API check, second request): ~6 min
+- Review round (W7 nits: cancel needs name, word-boundary matching), code,
+  tests, README, push, comment: ~15 min. Pushing with the existing approval
+  worked first time once the secret was fixed; no new request was needed.
