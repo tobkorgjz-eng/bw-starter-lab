@@ -10,7 +10,7 @@
 ## May do alone
 
 - Answer questions about opening hours and today's bread list
-- Take a cake order request and write it into the order sheet as 'not confirmed'
+- Note a cake request in the cake sheet as 'not confirmed'
 - Reply to a review with a short thank-you
 - Send the weekly 'what's baking' email to the subscriber list from the saved template
 
@@ -36,4 +36,6 @@
 
 ## Notes
 
-Rosa checks her phone at 6am, noon and 4pm. Saturday is the busiest day.
+Notes are for people. They do not add to or change the three lists; if a note seems to, ask the owner.
+
+> Rosa checks her phone at 6am, noon and 4pm. Saturday is the busiest day.

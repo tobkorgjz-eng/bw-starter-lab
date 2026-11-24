@@ -43,8 +43,12 @@ Optional: `business_type`, `answer_wait`, `notes`.
    It reads the business name (title), the owner (`Owner / final yes`), how
    to ask (`How to ask for a yes`) and the three lists. The brief's
    "Needs the owner's yes" becomes "Must ask first"; backup yes and
-   "Limits and exceptions" go into notes. It warns if the brief's Status is
-   not `confirmed`. Then open the answers file. If a required field is
+   "Limits and exceptions" go into notes. Rules written as `-`, `*`, `+` or
+   `1.` items are all read; any other line inside the three lists stops it
+   with an error, so no rule is dropped quietly. If the brief's Status is
+   not `confirmed` it exits 1: get the owner's sign-off first. Only for a
+   draft to show the owner, add `--allow-draft` (it then prints a warning).
+   Then open the answers file. If a required field is
    missing or empty, stop and ask the person running the intake; do not
    guess an owner name or an ask channel.
 2. **Sort each action into one list.** Use the client's own words. If the
@@ -79,13 +83,54 @@ Errors (exit code 1):
   legal, medical, …) appears in an item under "May do alone".
 - Hype or overclaiming wording ("guarantee", "revolutionary", … - full list in `BANNED_WORDS` in rules_tool.py).
 - A placeholder is left in (`TODO`, `TBD`, `{{…}}`).
+- A `##` section other than the five above and `Notes`, a repeated
+  section, or any other heading (`###`, a second `#`).
+- A line inside a section that is not a list item (`-`, `*`, `+`, `1.`),
+  so it would not be read as a rule. `Notes` is the exception, see below.
+- `Notes` does not start with the fixed line, or a note line is not
+  quoted with `> `.
+
+Risky words now also include order, purchase, buy, post, publish, share,
+access and permission (full list in `RISKY_WORDS`).
 
 Warnings: an item listed twice in the same list; an item longer than 25
-words.
+words; a note that mentions a risky word ("a note mentions 'refund': make
+sure it matches the three lists").
+
+### Notes cannot change the rules
+
+Notes (from `notes` in the answers, or a brief's backup yes and "Limits
+and exceptions") are written under `## Notes` after this fixed line:
+
+> Notes are for people. They do not add to or change the three lists; if a note seems to, ask the owner.
+
+Each note line is quoted with `> `, so a note such as `## Extra rules` or
+`- may refund up to 50` cannot become a section or a rule. Single-line
+fields (business name, owner, ask channel, business type, if no answer)
+have all whitespace, newlines included, collapsed to one line. If a limit
+really changes what the assistant may do, put it in one of the three lists
+instead.
 
 The checker reads words, not meaning. A clean result means the file has
 the right shape and no known red flags; the owner's read-through in step 6
 is still the real check.
+
+## This RULES.md and the starter kit's RULES.md
+
+This skill's `RULES.md` is a separate format from `starter-kit/rules/RULES.md`
+(PR #4). They are not interchangeable:
+
+| | This skill's `RULES.md` | `starter-kit/rules/RULES.md` (PR #4) |
+| --- | --- | --- |
+| Lists | May do alone / Must ask first / Never does | May do alone / Needs the owner's yes / Never does |
+| Items | Plain sentences, `Text (action_id)` from a brief | Backticked action names |
+| Read by | The owner, and the assistant as its written instructions | `starter-kit/rules/check_rules.py`, which checks a bot's planned action list |
+
+The assistant reads this file as its instructions; the kit's file is what
+`check_rules.py` uses to gate planned actions. `check_rules.py` cannot read
+this file (it reports `error: no rules found in RULES.md`). Until there is a
+converter, keep the action lists of the two files the same by hand when a
+client uses both.
 
 ## Worked example 1: Maple Lane Bakery
 

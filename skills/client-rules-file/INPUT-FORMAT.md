@@ -23,6 +23,11 @@ Rules for the lists:
   and extra spaces are collapsed.
 - The same action must not appear in two lists.
 
+Text fields other than `notes` are made one line (all whitespace,
+newlines included, collapsed). `notes` is written under `## Notes`, behind
+a fixed "Notes are for people" line, with every line quoted `> `, so a
+note can never add a section or a rule.
+
 Unknown fields are ignored, so an intake file with extra answers can be
 passed in as is.
 
@@ -43,6 +48,11 @@ a brief in the client-intake format (`skills/client-intake/`):
 | `## Needs the owner's yes` | `ask_first` |
 | `## Never does` | `never_do` |
 | `- Backup yes: …`, `## Limits and exceptions` | `notes` |
+
+Items may use `-`, `*`, `+`, `1.` or `1)`. Any other line inside the three
+lists is an error (exit 2) rather than being dropped; the template line
+"Anything not listed needs the owner's yes." is allowed. A brief whose
+Status is not `confirmed` exits 1 unless `--allow-draft` is given.
 
 A brief item like `` `offer_discount` — offer any discount `` becomes
 "Offer any discount (offer_discount)". Test fixture:

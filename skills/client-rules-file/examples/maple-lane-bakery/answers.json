@@ -6,7 +6,7 @@
   "answer_wait": "hold the action and tell the customer someone will reply by the next morning",
   "may_do_alone": [
     "Answer questions about opening hours and today's bread list",
-    "Take a cake order request and write it into the order sheet as 'not confirmed'",
+    "Note a cake request in the cake sheet as 'not confirmed'",
     "Reply to a review with a short thank-you",
     "Send the weekly 'what's baking' email to the subscriber list from the saved template"
   ],

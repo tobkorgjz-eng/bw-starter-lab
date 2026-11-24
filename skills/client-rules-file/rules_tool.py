@@ -3,7 +3,7 @@
 
 Stdlib only. No network calls.
 
-  python3 rules_tool.py from-brief BRIEF.md [-o ANSWERS.json]
+  python3 rules_tool.py from-brief BRIEF.md [-o ANSWERS.json] [--allow-draft]
   python3 rules_tool.py build ANSWERS.json [-o RULES.md]
   python3 rules_tool.py check RULES.md
 
@@ -13,7 +13,8 @@ what it must ask first, and what it never does.
 
 `from-brief` reads a client-intake brief (skills/client-intake/) and
 writes the answers JSON that `build` takes. "Needs the owner's yes" in
-the brief becomes "Must ask first".
+the brief becomes "Must ask first". It exits 1 if the brief's Status is
+not "confirmed", unless --allow-draft is given.
 
 `check` reads a rules file and reports problems. Exit code 0 means no
 errors (warnings may still be printed); 1 means at least one error;
@@ -33,6 +34,12 @@ SECTION_ASK = "Must ask first"
 SECTION_NEVER = "Never does"
 RULE_SECTIONS = (SECTION_ALONE, SECTION_ASK, SECTION_NEVER)
 REQUIRED_SECTIONS = ("About",) + RULE_SECTIONS + ("When unsure",)
+SECTION_NOTES = "Notes"
+ALLOWED_SECTIONS = REQUIRED_SECTIONS + (SECTION_NOTES,)
+# First line of every Notes section. Notes are free text from the owner or
+# the intake; they must never act as extra rules.
+NOTES_LINE = ("Notes are for people. They do not add to or change the three "
+              "lists; if a note seems to, ask the owner.")
 
 # Answer keys -> section headings.
 ANSWER_KEYS = {
@@ -50,6 +57,8 @@ RISKY_WORDS = (
     "pay", "payment", "refund", "charge", "invoice", "money", "transfer",
     "delete", "cancel", "sign", "contract", "password", "discount",
     "price change", "legal", "medical", "diagnos", "hire", "fire",
+    "order", "purchase", "buy", "post", "publish", "share", "access",
+    "permission",
 )
 
 # Wording the business does not use in client-facing files.
@@ -61,6 +70,15 @@ PLACEHOLDER_RE = re.compile(r"\bTODO\b|\bTBD\b|\{\{.*?\}\}|<fill", re.I)
 
 class AnswersError(ValueError):
     """Raised when an answers file cannot be turned into rules."""
+
+
+class DraftBriefError(AnswersError):
+    """Raised when a brief is not confirmed and drafts are not allowed."""
+
+
+def _one_line(value):
+    """Collapse all whitespace, newlines included, so a field stays one line."""
+    return " ".join(str(value).split())
 
 
 # ---------------------------------------------------------------- build
@@ -86,9 +104,11 @@ def build_rules(answers):
     if missing:
         raise AnswersError("missing answers: " + ", ".join(missing))
 
-    name = str(answers["business_name"]).strip()
-    owner = str(answers["owner_name"]).strip()
-    channel = str(answers["ask_channel"]).strip()
+    name = _one_line(answers["business_name"])
+    owner = _one_line(answers["owner_name"])
+    channel = _one_line(answers["ask_channel"])
+    business_type = _one_line(answers.get("business_type") or "")
+    answer_wait = _one_line(answers.get("answer_wait") or "")
     if not name or not owner or not channel:
         raise AnswersError("business_name, owner_name and ask_channel "
                            "must not be empty")
@@ -96,14 +116,14 @@ def build_rules(answers):
 
     lines = [TITLE_PREFIX + name, ""]
     lines += ["## About", ""]
-    if answers.get("business_type"):
-        lines.append(f"- Business: {name} ({answers['business_type']})")
+    if business_type:
+        lines.append(f"- Business: {name} ({business_type})")
     else:
         lines.append(f"- Business: {name}")
     lines.append(f"- Owner (gives every yes or no): {owner}")
     lines.append(f"- How the assistant asks: {channel}")
-    if answers.get("answer_wait"):
-        lines.append(f"- If no answer: {answers['answer_wait']}")
+    if answer_wait:
+        lines.append(f"- If no answer: {answer_wait}")
     lines.append("")
 
     for key, heading in ANSWER_KEYS.items():
@@ -119,9 +139,12 @@ def build_rules(answers):
         f"- Only {owner} can give a yes. A yes covers one action, one time.",
         "",
     ]
-    notes = answers.get("notes")
+    notes = str(answers.get("notes") or "").strip()
     if notes:
-        lines += ["## Notes", "", str(notes).strip(), ""]
+        lines += [f"## {SECTION_NOTES}", "", NOTES_LINE, ""]
+        lines += [("> " + n.rstrip()) if n.strip() else ">"
+                  for n in notes.splitlines()]
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -154,8 +177,16 @@ def _field(lines, label):
     return None
 
 
-def answers_from_brief(text):
-    """Return (answers dict, warnings) for the text of a client-intake brief."""
+# A line the brief template puts after the lists; "When unsure" covers it.
+BRIEF_KNOWN_PROSE = ("anything not listed",)
+
+
+def answers_from_brief(text, allow_draft=False):
+    """Return (answers dict, warnings) for the text of a client-intake brief.
+
+    Raises DraftBriefError if the brief's Status is not 'confirmed' and
+    allow_draft is false, and AnswersError if it cannot be read safely.
+    """
     warnings = []
     first = next((l.strip() for l in text.splitlines() if l.strip()), "")
     if not first.startswith(BRIEF_TITLE_PREFIX):
@@ -164,10 +195,22 @@ def answers_from_brief(text):
 
     status = re.search(r"^Status:\s*(.+)$", text, re.M)
     if not status or status.group(1).strip().lower() != "confirmed":
-        warnings.append("brief Status is not 'confirmed'; get the owner's "
-                        "sign-off before using the rules file")
+        if not allow_draft:
+            raise DraftBriefError(
+                "brief Status is not 'confirmed'; get the owner's sign-off "
+                "first, or pass --allow-draft to build a draft")
+        warnings.append("brief Status is not 'confirmed' (draft); get the "
+                        "owner's sign-off before using the rules file")
 
-    _, sections, _ = parse_rules(text)
+    doc = parse_document(text)
+    sections = doc["sections"]
+    unread = [f"'{line}' (in '{h}')" for h in BRIEF_SECTIONS
+              for line in doc["stray"].get(h, [])
+              if not line.lower().startswith(BRIEF_KNOWN_PROSE)]
+    if unread:
+        raise AnswersError("lines in a rule section that are not list items "
+                           "(write each rule as a '- ' item): "
+                           + "; ".join(unread))
     people = sections.get("People", [])
     owner = _field(people, "Owner / final yes")
     if owner:
@@ -199,23 +242,53 @@ def answers_from_brief(text):
 
 # ---------------------------------------------------------------- check
 
-def parse_rules(text):
-    """Split a rules file into {heading: [bullet items]} plus the title."""
-    title = None
-    sections = {}
-    order = []
+BULLET_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+(?P<item>.*\S)\s*$")
+HEADING_RE = re.compile(r"^(?P<marks>#{1,6})\s+(?P<text>.*\S)\s*$")
+
+
+def parse_document(text):
+    """Read a markdown rules file or brief.
+
+    Returns a dict with: title (first '# ' line), sections ({heading:
+    [bullet items]}, bullets '-', '*', '+', '1.' or '1)'), order (## headings
+    in order), stray ({heading: [other non-blank lines]}), raw ({heading:
+    [non-blank lines]}) and extra_headings (any other '#'..'######' line).
+    """
+    doc = {"title": None, "sections": {}, "order": [], "stray": {},
+           "raw": {}, "extra_headings": []}
     current = None
     for raw in text.splitlines():
         line = raw.rstrip()
-        if line.startswith("# ") and title is None:
-            title = line
-        elif line.startswith("## "):
-            current = line[3:].strip()
-            order.append(current)
-            sections.setdefault(current, [])
-        elif current and line.lstrip().startswith("- "):
-            sections[current].append(line.lstrip()[2:].strip())
-    return title, sections, order
+        if not line.strip():
+            continue
+        heading = HEADING_RE.match(line)
+        if heading and len(heading.group("marks")) == 1 and doc["title"] is None:
+            doc["title"] = line
+            continue
+        if heading and len(heading.group("marks")) == 2:
+            current = heading.group("text")
+            doc["order"].append(current)
+            for key in ("sections", "stray", "raw"):
+                doc[key].setdefault(current, [])
+            continue
+        if heading:
+            doc["extra_headings"].append(line)
+            continue
+        if current is None:
+            continue
+        doc["raw"][current].append(line.strip())
+        bullet = BULLET_RE.match(line)
+        if bullet:
+            doc["sections"][current].append(bullet.group("item"))
+        else:
+            doc["stray"][current].append(line.strip())
+    return doc
+
+
+def parse_rules(text):
+    """Split a rules file into (title, {heading: [bullet items]}, order)."""
+    doc = parse_document(text)
+    return doc["title"], doc["sections"], doc["order"]
 
 
 def _norm(item):
@@ -229,7 +302,8 @@ def _has_word(text, word):
 def check_rules(text):
     """Return (errors, warnings) for the text of a rules file."""
     errors, warnings = [], []
-    title, sections, order = parse_rules(text)
+    doc = parse_document(text)
+    title, sections, order = doc["title"], doc["sections"], doc["order"]
 
     if not title or not title.startswith(TITLE_PREFIX) \
             or not title[len(TITLE_PREFIX):].strip():
@@ -246,6 +320,37 @@ def check_rules(text):
     for heading in RULE_SECTIONS:
         if heading in sections and not sections[heading]:
             errors.append(f"section '{heading}' has no items")
+
+    for heading in order:
+        if heading not in ALLOWED_SECTIONS:
+            errors.append(f"unknown section '## {heading}'; only "
+                          + ", ".join(ALLOWED_SECTIONS) + " are allowed")
+    if len(order) != len(set(order)):
+        errors.append("a section heading appears more than once")
+    for line in doc["extra_headings"]:
+        errors.append(f"heading not allowed in a rules file: '{line}'")
+
+    for heading, lines in doc["stray"].items():
+        if heading == SECTION_NOTES:
+            continue
+        for line in lines:
+            errors.append(f"line in '{heading}' is not a list item and would "
+                          f"not be read as a rule: '{line}'")
+
+    if SECTION_NOTES in sections:
+        note_lines = doc["raw"][SECTION_NOTES]
+        if not note_lines or note_lines[0] != NOTES_LINE:
+            errors.append(f"'## {SECTION_NOTES}' must start with the line: "
+                          f"{NOTES_LINE}")
+        body = note_lines[1:] if note_lines[:1] == [NOTES_LINE] else note_lines
+        for line in body:
+            if not line.startswith(">"):
+                errors.append(f"note line must be quoted with '> ': '{line}'")
+        note_text = " ".join(body)
+        for word in RISKY_WORDS:
+            if _has_word(note_text, word):
+                warnings.append(f"a note mentions '{word}': make sure it "
+                                "matches the three lists")
 
     about = " ".join(sections.get("About", []))
     if "About" in sections and "Owner" not in about:
@@ -296,6 +401,9 @@ def main(argv=None):
                              help="client-intake brief markdown -> answers JSON")
     p_brief.add_argument("brief")
     p_brief.add_argument("-o", "--output", help="write here (default stdout)")
+    p_brief.add_argument("--allow-draft", action="store_true",
+                         help="build from a brief whose Status is not "
+                              "'confirmed' (prints a warning)")
     p_check = sub.add_parser("check", help="check a rules markdown file")
     p_check.add_argument("rules")
     args = parser.parse_args(argv)
@@ -303,7 +411,11 @@ def main(argv=None):
     if args.command == "from-brief":
         try:
             with open(args.brief, encoding="utf-8") as fh:
-                answers, warnings = answers_from_brief(fh.read())
+                answers, warnings = answers_from_brief(
+                    fh.read(), allow_draft=args.allow_draft)
+        except DraftBriefError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
         except (OSError, AnswersError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2

@@ -11,7 +11,7 @@
 
 - Book a service slot from the open slots in the calendar
 - Send the booking reminder the day before a slot
-- Answer questions about the standard service list and its posted prices
+- Answer questions about the standard service list and its listed prices
 - Tell a customer their bike is ready when Dev marks the job done
 
 ## Must ask first
