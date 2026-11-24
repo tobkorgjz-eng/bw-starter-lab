@@ -1,0 +1,46 @@
+{
+  "business": "Copperline Plumbing Co. (made-up demo business)",
+  "fallback": "I'm not sure about that one. I'll check with the owner and get back to you.",
+  "faqs": [
+    {
+      "question": "What are your business hours?",
+      "keywords": ["hours", "open", "close", "closing", "opening", "time"],
+      "answer": "We're open Monday to Friday, 8am to 6pm, and Saturday 9am to 1pm."
+    },
+    {
+      "question": "Do you offer emergency service?",
+      "keywords": ["emergency", "urgent", "burst", "flooding", "flood", "night", "weekend"],
+      "answer": "Yes. For burst pipes or flooding we offer 24/7 emergency call-outs. Shut off your main water valve first if you can."
+    },
+    {
+      "question": "How much does a call-out cost?",
+      "keywords": ["cost", "price", "charge", "fee", "callout", "call-out", "rates", "expensive"],
+      "answer": "Our standard call-out fee is $79, which includes the first 30 minutes of labor. Parts are extra."
+    },
+    {
+      "question": "What areas do you serve?",
+      "keywords": ["area", "areas", "serve", "service", "location", "where", "town", "come"],
+      "answer": "We cover Maple Valley and the surrounding towns within about 25 miles."
+    },
+    {
+      "question": "Do you fix water heaters?",
+      "keywords": ["water", "heater", "boiler", "hot", "tank", "tankless"],
+      "answer": "Yes, we repair and install tank and tankless water heaters."
+    },
+    {
+      "question": "Can you unclog drains?",
+      "keywords": ["drain", "drains", "clog", "clogged", "blocked", "unclog", "sink", "toilet", "slow"],
+      "answer": "Yes, we clear blocked sinks, toilets, showers and main drain lines."
+    },
+    {
+      "question": "Do you give free estimates?",
+      "keywords": ["estimate", "quote", "free", "estimates", "quotes"],
+      "answer": "Yes, estimates for planned jobs like remodels and repipes are free."
+    },
+    {
+      "question": "Are you licensed and insured?",
+      "keywords": ["licensed", "license", "insured", "insurance", "certified"],
+      "answer": "Yes, all our plumbers are licensed and the company is fully insured."
+    }
+  ]
+}

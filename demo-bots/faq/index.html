@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copperline FAQ Bot (demo)</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#5b6475; --accent:#b8642b; --bot:#eef1f5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --card:#1d2128; --ink:#e7eaf0; --muted:#9aa3b2; --accent:#e08a4f; --bot:#262b34; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--ink); padding:24px 16px; }
+  main { max-width:560px; margin:0 auto; background:var(--card); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  h1 { font-size:1.25rem; margin:0 0 4px; }
+  p.note { color:var(--muted); margin:0 0 16px; font-size:.9rem; }
+  #log { min-height:200px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .msg { padding:8px 12px; border-radius:10px; max-width:85%; }
+  .user { align-self:flex-end; background:var(--accent); color:#fff; }
+  .bot { align-self:flex-start; background:var(--bot); }
+  form { display:flex; gap:8px; }
+  input { flex:1; min-width:0; padding:10px; border:1px solid var(--muted); border-radius:8px; font:inherit; background:var(--card); color:var(--ink); }
+  button { padding:10px 16px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .chips button { background:var(--bot); color:var(--ink); padding:6px 10px; font-size:.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Copperline Plumbing Co. &mdash; FAQ bot</h1>
+  <p class="note">Demo only. Made-up business. Runs fully in your browser; no network calls.</p>
+  <div id="log" aria-live="polite"></div>
+  <form id="ask">
+    <input id="q" autocomplete="off" placeholder="Ask about hours, prices, drains..." aria-label="Your question">
+    <button type="submit">Ask</button>
+  </form>
+  <div class="chips" id="chips"></div>
+</main>
+<script type="application/json" id="faq-data">
+{
+  "business": "Copperline Plumbing Co. (made-up demo business)",
+  "fallback": "I'm not sure about that one. I'll check with the owner and get back to you.",
+  "faqs": [
+    {
+      "question": "What are your business hours?",
+      "keywords": [
+        "hours",
+        "open",
+        "close",
+        "closing",
+        "opening",
+        "time"
+      ],
+      "answer": "We're open Monday to Friday, 8am to 6pm, and Saturday 9am to 1pm."
+    },
+    {
+      "question": "Do you offer emergency service?",
+      "keywords": [
+        "emergency",
+        "urgent",
+        "burst",
+        "flooding",
+        "flood",
+        "night",
+        "weekend"
+      ],
+      "answer": "Yes. For burst pipes or flooding we offer 24/7 emergency call-outs. Shut off your main water valve first if you can."
+    },
+    {
+      "question": "How much does a call-out cost?",
+      "keywords": [
+        "cost",
+        "price",
+        "charge",
+        "fee",
+        "callout",
+        "call-out",
+        "rates",
+        "expensive"
+      ],
+      "answer": "Our standard call-out fee is $79, which includes the first 30 minutes of labor. Parts are extra."
+    },
+    {
+      "question": "What areas do you serve?",
+      "keywords": [
+        "area",
+        "areas",
+        "serve",
+        "service",
+        "location",
+        "where",
+        "town",
+        "come"
+      ],
+      "answer": "We cover Maple Valley and the surrounding towns within about 25 miles."
+    },
+    {
+      "question": "Do you fix water heaters?",
+      "keywords": [
+        "water",
+        "heater",
+        "boiler",
+        "hot",
+        "tank",
+        "tankless"
+      ],
+      "answer": "Yes, we repair and install tank and tankless water heaters."
+    },
+    {
+      "question": "Can you unclog drains?",
+      "keywords": [
+        "drain",
+        "drains",
+        "clog",
+        "clogged",
+        "blocked",
+        "unclog",
+        "sink",
+        "toilet",
+        "slow"
+      ],
+      "answer": "Yes, we clear blocked sinks, toilets, showers and main drain lines."
+    },
+    {
+      "question": "Do you give free estimates?",
+      "keywords": [
+        "estimate",
+        "quote",
+        "free",
+        "estimates",
+        "quotes"
+      ],
+      "answer": "Yes, estimates for planned jobs like remodels and repipes are free."
+    },
+    {
+      "question": "Are you licensed and insured?",
+      "keywords": [
+        "licensed",
+        "license",
+        "insured",
+        "insurance",
+        "certified"
+      ],
+      "answer": "Yes, all our plumbers are licensed and the company is fully insured."
+    }
+  ]
+}
+</script>
+<script>
+(function () {
+  // Same matching logic as faq_bot.py: curated keyword overlap, stopwords ignored.
+  var data = JSON.parse(document.getElementById("faq-data").textContent);
+  var STOP = "a an the is are do does you your i my me we can what how of to for in on it and or be with have has any much there".split(" ");
+  function tokenize(t) {
+    return (t.toLowerCase().match(/[a-z0-9][a-z0-9\-]*/g) || []).filter(function (w) { return STOP.indexOf(w) < 0; });
+  }
+  function answer(msg) {
+    var words = tokenize(msg).filter(function (w, i, a) { return a.indexOf(w) === i; });
+    var best = null, bestScore = 0;
+    data.faqs.forEach(function (e) {
+      var kw = e.keywords.map(function (k) { return k.toLowerCase(); });
+      var s = words.filter(function (w) { return kw.indexOf(w) >= 0; }).length;
+      if (s > bestScore) { best = e; bestScore = s; }
+    });
+    return best ? best.answer : data.fallback;
+  }
+  var log = document.getElementById("log");
+  function add(text, cls) {
+    var d = document.createElement("div");
+    d.className = "msg " + cls; d.textContent = text;
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+  function ask(q) { if (!q.trim()) return; add(q, "user"); add(answer(q), "bot"); }
+  add("Hi! Ask me anything about our plumbing services.", "bot");
+  document.getElementById("ask").addEventListener("submit", function (ev) {
+    ev.preventDefault(); var i = document.getElementById("q"); ask(i.value); i.value = "";
+  });
+  ["What are your hours?", "My sink is clogged", "Do you sell pizza?"].forEach(function (q) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = q;
+    b.addEventListener("click", function () { ask(q); });
+    document.getElementById("chips").appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>
