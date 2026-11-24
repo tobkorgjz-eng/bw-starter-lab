@@ -4,43 +4,121 @@
   "faqs": [
     {
       "question": "What are your business hours?",
-      "keywords": ["hours", "open", "close", "closing", "opening", "time"],
-      "answer": "We're open Monday to Friday, 8am to 6pm, and Saturday 9am to 1pm."
+      "keywords": [
+        "hours",
+        "opening",
+        "closing"
+      ],
+      "answer": "We're open Monday to Friday, 8am to 6pm, and Saturday 9am to 1pm.",
+      "phrases": [
+        "you open",
+        "you close",
+        "time do you",
+        "business hours"
+      ]
     },
     {
       "question": "Do you offer emergency service?",
-      "keywords": ["emergency", "urgent", "burst", "flooding", "flood", "night", "weekend"],
-      "answer": "Yes. For burst pipes or flooding we offer 24/7 emergency call-outs. Shut off your main water valve first if you can."
+      "keywords": [
+        "emergency",
+        "urgent",
+        "burst",
+        "flooding",
+        "flooded"
+      ],
+      "answer": "Yes. For burst pipes or flooding we offer 24/7 emergency call-outs. Shut off your main water valve first if you can.",
+      "phrases": [
+        "emergency service",
+        "burst pipe",
+        "24/7"
+      ]
     },
     {
       "question": "How much does a call-out cost?",
-      "keywords": ["cost", "price", "charge", "fee", "callout", "call-out", "rates", "expensive"],
-      "answer": "Our standard call-out fee is $79, which includes the first 30 minutes of labor. Parts are extra."
+      "keywords": [
+        "callout",
+        "call-out",
+        "price",
+        "prices",
+        "pricing",
+        "rates"
+      ],
+      "answer": "Our standard call-out fee is $79, which includes the first 30 minutes of labor. Parts are extra.",
+      "phrases": [
+        "how much",
+        "call out",
+        "you charge"
+      ]
     },
     {
       "question": "What areas do you serve?",
-      "keywords": ["area", "areas", "serve", "service", "location", "where", "town", "come"],
-      "answer": "We cover Maple Valley and the surrounding towns within about 25 miles."
+      "keywords": [
+        "areas"
+      ],
+      "answer": "We cover Maple Valley and the surrounding towns within about 25 miles.",
+      "phrases": [
+        "service area",
+        "areas you serve",
+        "do you serve",
+        "do you cover",
+        "come out to"
+      ]
     },
     {
       "question": "Do you fix water heaters?",
-      "keywords": ["water", "heater", "boiler", "hot", "tank", "tankless"],
-      "answer": "Yes, we repair and install tank and tankless water heaters."
+      "keywords": [
+        "heater",
+        "heaters",
+        "boiler",
+        "tankless"
+      ],
+      "answer": "Yes, we repair and install tank and tankless water heaters.",
+      "phrases": [
+        "water heater",
+        "hot water",
+        "no hot water"
+      ]
     },
     {
       "question": "Can you unclog drains?",
-      "keywords": ["drain", "drains", "clog", "clogged", "blocked", "unclog", "sink", "toilet", "slow"],
-      "answer": "Yes, we clear blocked sinks, toilets, showers and main drain lines."
+      "keywords": [
+        "drain",
+        "drains",
+        "clog",
+        "clogged",
+        "unclog",
+        "blocked"
+      ],
+      "answer": "Yes, we clear blocked sinks, toilets, showers and main drain lines.",
+      "phrases": [
+        "slow drain"
+      ]
     },
     {
       "question": "Do you give free estimates?",
-      "keywords": ["estimate", "quote", "free", "estimates", "quotes"],
-      "answer": "Yes, estimates for planned jobs like remodels and repipes are free."
+      "keywords": [
+        "estimate",
+        "estimates",
+        "quote",
+        "quotes"
+      ],
+      "answer": "Yes, estimates for planned jobs like remodels and repipes are free.",
+      "phrases": [
+        "free estimate",
+        "free quote"
+      ]
     },
     {
       "question": "Are you licensed and insured?",
-      "keywords": ["licensed", "license", "insured", "insurance", "certified"],
-      "answer": "Yes, all our plumbers are licensed and the company is fully insured."
+      "keywords": [
+        "licensed",
+        "license",
+        "insured",
+        "insurance",
+        "certified"
+      ],
+      "answer": "Yes, all our plumbers are licensed and the company is fully insured.",
+      "phrases": []
     }
   ]
 }

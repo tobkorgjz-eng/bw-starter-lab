@@ -20,10 +20,21 @@ STOPWORDS = {
 }
 
 
+def words_of(text):
+    """All lowercase words (letters, digits, hyphens), stopwords kept."""
+    return re.findall(r"[a-z0-9][a-z0-9\-]*", text.lower())
+
+
 def tokenize(text):
-    """Lowercase words (letters, digits, hyphens), minus stopwords."""
-    words = re.findall(r"[a-z0-9][a-z0-9\-]*", text.lower())
-    return [w for w in words if w not in STOPWORDS]
+    """Lowercase words, minus stopwords."""
+    return [w for w in words_of(text) if w not in STOPWORDS]
+
+
+def contains_phrase(words, phrase):
+    """True if the phrase's words appear consecutively in words."""
+    target = words_of(phrase)
+    n = len(target)
+    return n > 0 and any(words[i:i + n] == target for i in range(len(words) - n + 1))
 
 
 def load_faq(path=DEFAULT_FAQ_PATH):
@@ -38,17 +49,24 @@ class FaqBot:
         self.faqs = data["faqs"]
         self.min_score = min_score
 
-    def score(self, entry, words):
-        # Only curated keywords count, so generic words like "fix" in the
-        # question text don't cause false matches.
+    def score(self, entry, message):
+        """Count specific keywords and multi-word phrases found in message.
+
+        faq.json keeps only specific single keywords (e.g. "heater").
+        Generic words such as "water" or "hot" only count inside a
+        phrase (e.g. "hot water"), so "Is my water bill too high?"
+        does not match anything and gets the fallback.
+        """
+        all_words = words_of(message)
         keywords = {k.lower() for k in entry.get("keywords", [])}
-        return sum(1 for w in set(words) if w in keywords)
+        score = sum(1 for w in set(tokenize(message)) if w in keywords)
+        score += sum(1 for p in entry.get("phrases", []) if contains_phrase(all_words, p))
+        return score
 
     def best_match(self, message):
-        words = tokenize(message)
         best, best_score = None, 0
         for entry in self.faqs:
-            s = self.score(entry, words)
+            s = self.score(entry, message)
             if s > best_score:
                 best, best_score = entry, s
         if best_score < self.min_score:

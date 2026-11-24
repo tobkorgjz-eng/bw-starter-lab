@@ -2,7 +2,7 @@ import json
 import os
 import unittest
 
-from faq_bot import DEFAULT_FAQ_PATH, FaqBot, load_faq, tokenize
+from faq_bot import DEFAULT_FAQ_PATH, FaqBot, contains_phrase, load_faq, tokenize
 
 
 class TestFaqData(unittest.TestCase):
@@ -53,6 +53,30 @@ class TestFaqBot(unittest.TestCase):
     def test_generic_verb_does_not_match(self):
         self.assertEqual(self.bot.answer("Can you fix my roof?"), self.data["fallback"])
 
+    def test_water_bill_falls_back(self):
+        self.assertEqual(self.bot.answer("Is my water bill too high?"), self.data["fallback"])
+
+    def test_single_generic_words_fall_back(self):
+        for q in ["What time is it?", "The coffee is too hot", "Where is the library?",
+                  "Can you come to my party?", "Is customer service friendly?",
+                  "Any plans for the weekend?", "Is it free?", "My door is open",
+                  "My water tastes odd"]:
+            with self.subTest(q=q):
+                self.assertEqual(self.bot.answer(q), self.data["fallback"])
+
+    def test_phrases_still_match(self):
+        heater = self.answer_for("Do you fix water heaters?")
+        self.assertEqual(self.bot.answer("I have no hot water"), heater)
+        self.assertEqual(self.bot.answer("My water heater is leaking"), heater)
+        self.assertEqual(self.bot.answer("What time do you close?"),
+                         self.answer_for("What are your business hours?"))
+        self.assertEqual(self.bot.answer("Do you serve Maple Valley?"),
+                         self.answer_for("What areas do you serve?"))
+        self.assertEqual(self.bot.answer("Are you available 24/7?"),
+                         self.answer_for("Do you offer emergency service?"))
+        self.assertEqual(self.bot.answer("Can I get a free quote?"),
+                         self.answer_for("Do you give free estimates?"))
+
     def test_empty_falls_back(self):
         self.assertEqual(self.bot.answer(""), self.data["fallback"])
         self.assertEqual(self.bot.answer("   "), self.data["fallback"])
@@ -69,6 +93,7 @@ class TestFaqBot(unittest.TestCase):
         bot = FaqBot({"fallback": "I'll check with the owner.",
                       "faqs": [{"question": "Parking?", "keywords": ["parking"],
                                 "answer": "Street parking only."}]})
+        # "phrases" is optional.
         self.assertEqual(bot.answer("Is there parking?"), "Street parking only.")
         self.assertEqual(bot.answer("Hours?"), "I'll check with the owner.")
 
@@ -76,6 +101,11 @@ class TestFaqBot(unittest.TestCase):
 class TestTokenize(unittest.TestCase):
     def test_removes_stopwords_and_lowercases(self):
         self.assertEqual(tokenize("What ARE your Hours?"), ["hours"])
+
+    def test_contains_phrase(self):
+        self.assertTrue(contains_phrase(["no", "hot", "water"], "hot water"))
+        self.assertFalse(contains_phrase(["hot", "and", "water"], "hot water"))
+        self.assertFalse(contains_phrase(["water"], ""))
 
 
 class TestDemoPage(unittest.TestCase):
