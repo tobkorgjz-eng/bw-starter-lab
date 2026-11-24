@@ -1,0 +1,168 @@
+{
+  "business": "Copperline Plumbing Co. (made-up demo business)",
+  "fallback": "I don't have that in my FAQ, so I won't guess. Would you like me to pass your question to a person at Copperline? They will reply to you themselves.",
+  "injection_reply": "I can only answer from Copperline's FAQ, and messages can't change how I work. If you'd like, I can pass your message to a person at Copperline.",
+  "handoff_offer": "Pass my question to a person",
+  "handoff_confirm": "Thanks. This is a demo, so nothing is sent anywhere. In a real setup your question would go to a person at Copperline, who would reply to you directly.",
+  "injection_phrases": [
+    "ignore your",
+    "ignore all",
+    "ignore any",
+    "ignore previous",
+    "ignore prior",
+    "ignore the above",
+    "ignore the rules",
+    "ignore the instructions",
+    "ignore these",
+    "ignore those",
+    "disregard",
+    "forget your",
+    "forget all",
+    "forget previous",
+    "system prompt",
+    "pretend you",
+    "pretend to be",
+    "new rules",
+    "new instructions",
+    "your instructions",
+    "your rules",
+    "developer mode",
+    "jailbreak",
+    "roleplay",
+    "role-play",
+    "repeat after me"
+  ],
+  "injection_context_phrases": [
+    "you are now",
+    "act as",
+    "override",
+    "from now on"
+  ],
+  "injection_context_targets": [
+    "rules",
+    "instructions",
+    "prompt",
+    "programming",
+    "guidelines"
+  ],
+  "faqs": [
+    {
+      "question": "What are your business hours?",
+      "keywords": [
+        "hours",
+        "opening",
+        "closing"
+      ],
+      "answer": "We're open Monday to Friday, 8am to 6pm, and Saturday 9am to 1pm.",
+      "phrases": [
+        "you open",
+        "you close",
+        "time do you",
+        "business hours"
+      ]
+    },
+    {
+      "question": "Do you offer emergency service?",
+      "keywords": [
+        "emergency",
+        "urgent",
+        "burst",
+        "flooding",
+        "flooded"
+      ],
+      "answer": "Yes. For burst pipes or flooding we offer 24/7 emergency call-outs. Shut off your main water valve first if you can.",
+      "phrases": [
+        "emergency service",
+        "burst pipe",
+        "24/7"
+      ]
+    },
+    {
+      "question": "How much does a call-out cost?",
+      "keywords": [
+        "callout",
+        "call-out",
+        "price",
+        "prices",
+        "pricing",
+        "rates"
+      ],
+      "answer": "Our standard call-out fee is $79, which includes the first 30 minutes of labor. Parts are extra. Other job prices aren't listed here; a plumber gives an estimate after seeing the job.",
+      "phrases": [
+        "how much",
+        "call out",
+        "you charge"
+      ]
+    },
+    {
+      "question": "What areas do you serve?",
+      "keywords": [
+        "areas"
+      ],
+      "answer": "We cover Maple Valley and the surrounding towns within about 25 miles.",
+      "phrases": [
+        "service area",
+        "areas you serve",
+        "do you serve",
+        "do you cover",
+        "come out to"
+      ]
+    },
+    {
+      "question": "Do you fix water heaters?",
+      "keywords": [
+        "heater",
+        "heaters",
+        "boiler",
+        "tankless"
+      ],
+      "answer": "Yes, we repair and install tank and tankless water heaters.",
+      "phrases": [
+        "water heater",
+        "hot water",
+        "no hot water"
+      ]
+    },
+    {
+      "question": "Can you unclog drains?",
+      "keywords": [
+        "drain",
+        "drains",
+        "clog",
+        "clogged",
+        "unclog",
+        "blocked"
+      ],
+      "answer": "Yes, we clear blocked sinks, toilets, showers and main drain lines.",
+      "phrases": [
+        "slow drain"
+      ]
+    },
+    {
+      "question": "Do you give free estimates?",
+      "keywords": [
+        "estimate",
+        "estimates",
+        "quote",
+        "quotes"
+      ],
+      "answer": "Yes, estimates for planned jobs like remodels and repipes are free.",
+      "phrases": [
+        "free estimate",
+        "free quote"
+      ]
+    },
+    {
+      "question": "Are you licensed and insured?",
+      "keywords": [
+        "licensed",
+        "license",
+        "insured",
+        "insurance",
+        "certified"
+      ],
+      "answer": "Yes, all our plumbers are licensed and the company is fully insured.",
+      "phrases": []
+    }
+  ]
+}
