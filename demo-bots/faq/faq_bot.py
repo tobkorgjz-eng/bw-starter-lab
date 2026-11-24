@@ -60,12 +60,23 @@ class FaqBot:
         self.faqs = data["faqs"]
         self.injection_reply = data.get("injection_reply", DEFAULT_INJECTION_REPLY)
         self.injection_phrases = data.get("injection_phrases", [])
+        # Phrases like "act as" or "from now on" are common in ordinary
+        # questions, so they only count next to an instruction word.
+        self.injection_context_phrases = data.get("injection_context_phrases", [])
+        self.injection_context_targets = data.get("injection_context_targets", [])
         self.min_score = min_score
 
     def looks_like_injection(self, message):
         """True if the message tries to give the bot new instructions."""
         all_words = words_of(message)
-        return any(contains_phrase(all_words, p) for p in self.injection_phrases)
+
+        def has_any(phrases):
+            return any(contains_phrase(all_words, p) for p in phrases)
+
+        if has_any(self.injection_phrases):
+            return True
+        return (has_any(self.injection_context_phrases)
+                and has_any(self.injection_context_targets))
 
     def score(self, entry, message):
         """Count specific keywords and multi-word phrases found in message.

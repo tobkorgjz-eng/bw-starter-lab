@@ -59,21 +59,30 @@
     "forget all",
     "forget previous",
     "system prompt",
-    "you are now",
     "pretend you",
     "pretend to be",
-    "act as",
     "new rules",
     "new instructions",
     "your instructions",
     "your rules",
     "developer mode",
     "jailbreak",
-    "override",
     "roleplay",
     "role-play",
-    "repeat after me",
+    "repeat after me"
+  ],
+  "injection_context_phrases": [
+    "you are now",
+    "act as",
+    "override",
     "from now on"
+  ],
+  "injection_context_targets": [
+    "rules",
+    "instructions",
+    "prompt",
+    "programming",
+    "guidelines"
   ],
   "faqs": [
     {
@@ -217,7 +226,10 @@
   }
   function looksLikeInjection(msg) {
     var all = wordsOf(msg);
-    return (data.injection_phrases || []).some(function (p) { return containsPhrase(all, p); });
+    function hasAny(list) { return (list || []).some(function (p) { return containsPhrase(all, p); }); }
+    if (hasAny(data.injection_phrases)) return true;
+    // "act as", "from now on" etc. only count next to an instruction word.
+    return hasAny(data.injection_context_phrases) && hasAny(data.injection_context_targets);
   }
   function score(e, msg) {
     var all = wordsOf(msg);

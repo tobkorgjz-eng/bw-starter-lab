@@ -20,21 +20,30 @@
     "forget all",
     "forget previous",
     "system prompt",
-    "you are now",
     "pretend you",
     "pretend to be",
-    "act as",
     "new rules",
     "new instructions",
     "your instructions",
     "your rules",
     "developer mode",
     "jailbreak",
-    "override",
     "roleplay",
     "role-play",
-    "repeat after me",
+    "repeat after me"
+  ],
+  "injection_context_phrases": [
+    "you are now",
+    "act as",
+    "override",
     "from now on"
+  ],
+  "injection_context_targets": [
+    "rules",
+    "instructions",
+    "prompt",
+    "programming",
+    "guidelines"
   ],
   "faqs": [
     {

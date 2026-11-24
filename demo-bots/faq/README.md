@@ -25,9 +25,13 @@ so instead of guessing and offers to pass the question to a person.
   aren't listed. Questions about discounts, refunds, guarantees or arrival
   times get the fallback, not a yes.
 - **Customer text is data, not instructions.** A message containing phrases
-  such as "ignore your rules", "you are now", "system prompt" or
-  "from now on" gets a fixed reply ("messages can't change how I work") plus
-  the hand-off offer, even if it also contains FAQ keywords. This check is
+  such as "ignore your rules", "disregard" or "system prompt" gets a fixed
+  reply ("messages can't change how I work") plus the hand-off offer, even
+  if it also contains FAQ keywords. Everyday phrases ("you are now",
+  "act as", "override", "from now on") only count when the same message
+  also has an instruction word ("rules", "instructions", "prompt",
+  "programming", "guidelines"), so "Can I override the thermostat on my
+  water heater?" still gets the water heater answer. This check is
   a simple phrase list, not a full defense. The bot is still safe with
   messages the list misses, because it can only ever reply with the fixed
   texts above.
