@@ -32,3 +32,21 @@ How each PR was checked:
 | [#9](pr-9.md) | w8-scribe | 93f7686 | docs only | skeleton placeholders; PR numbers to fill |
 
 No token, key or credential was found in any PR, FEEDBACK files included.
+
+## Re-review (after the builders' fixes)
+
+Same method: fresh worktree at the new head, scan, offline tests, and the
+same hostile inputs re-run against the new code. Posted as one COMMENT review
+per PR (`rr-N.md`).
+
+| PR | Head re-reviewed | Tests (offline) | Result |
+| --- | --- | --- | --- |
+| [#1](rr-1.md) | 949b504 | 28 + 17 OK | 6/6 fixed |
+| [#2](rr-2.md) | 82f6e45 | 38 OK | 1/1 fixed |
+| [#4](rr-4.md) | 8962b2e | 9 + 47 + 15 OK | 3/4 fixed; README nit open (`README.md:4-5`) |
+| [#5](rr-5.md) | 2a54531 | 43 OK | 2/2 fixed |
+| [#6](rr-6.md) | 8d3bff2 | 25 OK | 3/3 fixed |
+| [#7](rr-7.md) | 5671c47 | 50 OK | 5/5 fixed (format finding fixed by documenting it) |
+| [#9](rr-9.md) | see file | 6 OK | earlier 3/3 fixed; new: FEEDBACK-copy merge conflicts, outdated test counts |
+
+All-branch local merge (#1, #2, #4, #5, #6, #7, #8): `Total: 10 folders, 10 passed, 0 failed, 288 tests`, offline.
