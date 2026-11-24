@@ -15,6 +15,7 @@ Box: w8-scribe (scribe). Branch: w8-scribe. No token or credential appears in th
 - The scribe has to wait for the manager to type "GO SCRIBE". There is no built-in signal for "the other boxes have pushed"; it depends on a person or the manager typing into the terminal.
 - **Blocker: the granted GitHub credential is rejected by GitHub.** The request was granted (16:35:42Z, hosts github.com + api.github.com). The egress did not block anything (audit shows `blocked:false`), but every call carrying the credential got 401 from GitHub, including after `eval "$(discobox-access env)"` and after waiting more than 2 minutes. Without auth the same public GET gives 200. So the stand-in reaches GitHub, but the value behind it is not a working token for this repo (wrong, expired or not swapped). Nothing in `discobox-access list` or `--debug list` tells you this; the grant looks healthy. The manager confirmed this is the project's GitHub secret itself: it fails the same way for every box, manager included, so it is not the routes. Advice was: no second access request, keep the one approval, commit locally, wait for the person to update the secret, then `eval "$(discobox-access env)"` and retry. Suggestion for Discobox: check a secret against its host when it is bound or approved (for GitHub, one GET /user), and show 'secret rejected by upstream' in `list` or the audit, so 9 boxes do not each debug the same 401.
 - Plain `git push` does not pick up `GH_TOKEN` on its own: with no credential helper, git asks for a username and fails. A one-line helper that reads `$GH_TOKEN` from the environment was needed (the token is never printed).
+- Fixed: the person updated the project's `github` secret (about 16:55 UTC). With no new request and the same approval, `eval "$(discobox-access env)"` then the push worked at 16:56 UTC and the REST POST .../pulls opened PR #9 on the first try. Time from grant to first working push: about 21 minutes, all of it waiting on the bad secret.
 - (to update after GO SCRIBE if anything else goes wrong)
 
 ## Exact error text
@@ -63,6 +64,8 @@ Audit line (`discobox-access audit --host api.github.com`):
 | Read task, check identity (rule 1, rule 2) | 2 |
 | Request GitHub access and wait for answer | 1 |
 | Skeleton of both docs + this file | 4 |
-| Commit; push blocked by 401 from GitHub (debugging) | 5 so far |
+| Commit; push blocked by 401 from GitHub (debugging) | 5 |
+| Waiting for the secret fix (idle, background check every 2 min) | 15 |
+| Push + open PR #9 via REST | 2 |
 | Wait for "GO SCRIBE" | (to fill) |
 | Collect FEEDBACK files, write both docs | (to fill) |
