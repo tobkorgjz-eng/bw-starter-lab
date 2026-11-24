@@ -27,6 +27,11 @@ Task: build `skills/upwork-proposal/` on top of PR #1 (branch `w5-upwork-helper`
   routes and the approval are fine. Per the manager I did not send a second
   access request. I committed locally and waited for a person to update the
   secret.
+- A person updated the secret about 18 minutes later (first 200 at 16:56Z).
+  After `eval "$(discobox-access env)"`, the push, PATCH pulls/1 and the PR
+  comment all worked on the first try with the same approval.
+- Waiting cost no tokens: a background loop re-ran `discobox-access env` and
+  one allowed GET every 60 s, and stopped on the first 200.
 - ListAgents showed no reachable manager session, so I could not message the
   manager from the box.
 
