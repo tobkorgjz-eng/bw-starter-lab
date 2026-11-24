@@ -15,6 +15,8 @@ Client: {{BUSINESS_NAME}}
 - [ ] Copy `new-client-layout/` to a new folder named after the client (lowercase, hyphens)
 - [ ] Fill in `config/` with business details (no passwords or keys)
 - [ ] Copy the needed templates from `prompts/` into the client's `prompts/` folder
+- [ ] Copy `starter-kit/rules/RULES.md` into the client's `rules/` folder
+- [ ] Edit the rules with the client: may do alone, needs the owner's yes, never does
 - [ ] Add frequently asked questions to `knowledge/`
 
 ## 3. Prompt setup
@@ -27,6 +29,7 @@ Client: {{BUSINESS_NAME}}
 
 - [ ] Try ten sample conversations using made-up customer details
 - [ ] Confirm the assistant hands off anything it cannot answer
+- [ ] Run `check_rules.py` on a sample plan and confirm it asks before "needs a yes" actions
 - [ ] Confirm the assistant refuses payment details and advice it should not give
 - [ ] Record the results in `notes/`
 

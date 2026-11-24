@@ -1,6 +1,7 @@
 # Starter Kit Templates
 
-Copy these when onboarding a new client. Everything here is generic and uses
+Copy these when onboarding a new client. The house rules they refer to are in
+`../rules/` (see `../README.md` for the whole pack). Everything here is generic and uses
 made-up businesses only.
 
 | Path | What it is |

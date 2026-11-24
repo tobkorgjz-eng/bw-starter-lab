@@ -12,7 +12,7 @@ TEMPLATES = Path(__file__).resolve().parent.parent
 PROMPTS = ["receptionist.md", "scheduler.md", "follow-up-writer.md"]
 PROMPT_SECTIONS = ["## Role", "## Business details", "## Rules",
                    "## Escalation", "## Example"]
-LAYOUT_DIRS = ["config", "prompts", "knowledge", "logs", "notes"]
+LAYOUT_DIRS = ["config", "rules", "prompts", "knowledge", "logs", "notes"]
 
 PLACEHOLDER = re.compile(r"\{\{([^{}]*)\}\}")
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
@@ -85,6 +85,11 @@ class TestWellFormed(unittest.TestCase):
                 self.assertIn("BUSINESS_NAME", found)
                 self.assertIn("ESCALATION_CONTACT", found)
 
+    def test_prompts_point_to_rules(self):
+        for name in PROMPTS:
+            with self.subTest(prompt=name):
+                self.assertIn("RULES.md", read(TEMPLATES / "prompts" / name))
+
     def test_placeholders_are_valid(self):
         for path in all_markdown():
             text = read(path)
@@ -108,6 +113,7 @@ class TestWellFormed(unittest.TestCase):
         text = read(TEMPLATES / "CLIENT-README.md")
         for heading in ["## What the assistant does",
                         "## What the assistant will not do",
+                        "## What the assistant asks you first",
                         "## What we need from you"]:
             with self.subTest(heading=heading):
                 self.assertIn(heading, text)

@@ -17,6 +17,23 @@ Your assistant has three jobs:
    visit or enquiry. A person on your team reviews each draft before it is
    sent.
 
+## What the assistant asks you first
+
+Your assistant runs by your rules and asks before it acts. Together we write
+a short rules list with three parts:
+
+- **Things it may do alone** – for example, reading new messages, drafting a
+  reply for you to check, or answering questions from your approved FAQ.
+- **Things it asks you about first** – for example, sending an email,
+  booking or cancelling an appointment, giving a refund or posting on social
+  media. It waits for a clear yes from you. It cannot say yes on your behalf.
+- **Things it never does** – for example, deleting records, sharing
+  passwords, moving money or signing contracts. It refuses these even if
+  someone asks.
+
+Anything not on the list counts as "ask first". You can change the list at
+any time; tell us and we will update it.
+
 ## What the assistant will not do
 
 - It will not take payments or ask for card numbers.
@@ -46,4 +63,4 @@ what happened, roughly when, and what you expected instead.
 
 ---
 
-*Example used in this kit: "Maple Lane Pet Grooming", a made-up business.*
+*Example used in this kit: "Maple Lane Bakery", a made-up business.*

@@ -7,5 +7,8 @@ replace every `{{PLACEHOLDER}}`.
 - `scheduler.md` – books, moves and cancels appointments within rules.
 - `follow-up-writer.md` – drafts short follow-up messages for human review.
 
+Every template tells the assistant to follow the client's `RULES.md`
+(see `../../rules/`), so it asks before it acts.
+
 Each template has the same sections: Role, Business details, Rules, Escalation,
 and Example.
