@@ -34,6 +34,25 @@ RED_FLAGS = [
     "telegram", "whatsapp", "urgent asap", "guarantees profit",
 ]
 
+# The job post is untrusted data. These phrases mean it tries to give the
+# assistant orders or to change what we claim. They are never followed.
+INJECTION_PHRASES = [
+    "ignore your", "ignore previous", "ignore all", "ignore the above",
+    "disregard", "new instructions", "system prompt", "you are now",
+    "assistant:", "say you have", "say you are", "pretend", "phone number",
+    "email me", "call me", "text me",
+]
+# Contact details and links in a post: flagged, never copied into a draft.
+CONTACT_PATTERNS = {
+    "email address": r"[\w.+-]+@[\w-]+\.[\w.]+",
+    "link": r"(?i)\b(?:https?://|www\.)\S+",
+    "phone number": r"\+?\d[\d\s().-]{6,}\d",
+}
+
+# Usual minimum for a first scoped version, in US dollars.
+MIN_FIXED_BUDGET = 500
+MIN_HOURLY_BUDGET = 30
+
 # Never in a draft. "proof" is matched as a substring, so "proofread" counts.
 BANNED_SUBSTRINGS = ["proof"]
 HYPE_WORDS = [
@@ -85,27 +104,74 @@ def find_banned(text):
     return found
 
 
-def quote(text, fallback):
-    """Return client text unchanged if it is free of banned words, else fallback.
+def injection_phrases(text):
+    """Instruction-like phrases aimed at the assistant (case-insensitive)."""
+    low = text.lower()
+    return [p for p in INJECTION_PHRASES if p in low]
 
-    We never rewrite a client's words (that could change their meaning);
-    we just stop quoting them.
+
+def contact_details(text):
+    """Kinds of contact details or links found in text (never the values)."""
+    return [kind for kind, pat in CONTACT_PATTERNS.items() if re.search(pat, text)]
+
+
+def trusted_part(text):
+    """Text minus every sentence that carries instructions or contact details.
+
+    Used for skill matching and word counts, so planted lines cannot raise
+    the score or make us claim a skill.
+    """
+    sentences = re.split(r"(?<=[.!?])\s+|\n", text)
+    keep = [x for x in sentences if not injection_phrases(x) and not contact_details(x)]
+    return " ".join(keep)
+
+
+def quote(text, fallback):
+    """Return client text unchanged only if it is safe to repeat, else fallback.
+
+    Not safe: banned or hype words, red flags, instructions to the assistant,
+    contact details or links. We never rewrite a client's words (that could
+    change their meaning); we just stop quoting them.
     """
     text = text.replace("(made-up)", "").strip()
-    return text if text and not find_banned(text) else fallback
+    low = text.lower()
+    unsafe = (find_banned(text) or injection_phrases(text) or contact_details(text)
+              or any(f in low for f in RED_FLAGS))
+    return text if text and not unsafe else fallback
+
+
+def budget_fits(budget):
+    """True only if the budget is a dollar amount at or above our minimum.
+
+    Ranges use the lowest number. Anything we cannot read returns False.
+    """
+    if "$" not in budget:
+        return False
+    nums = [float(n.replace(",", "")) for n in re.findall(r"\d[\d,]*(?:\.\d+)?", budget)]
+    if not nums:
+        return False
+    hourly = re.search(r"(?i)/\s*h|hour|\bhr\b", budget) is not None
+    return min(nums) >= (MIN_HOURLY_BUDGET if hourly else MIN_FIXED_BUDGET)
 
 
 def score_fit(job):
     """Return (score 1-5, list of reasons, matched skills, missing skills)."""
-    text = (job["title"] + " " + job["description"] + " " + " ".join(job["skills"])).lower()
+    raw = job["title"] + " " + job["client"] + " " + job["description"]
+    description = trusted_part(job["description"])
+    text = (trusted_part(job["title"]) + " " + description + " "
+            + " ".join(job["skills"])).lower()
     matched = [s for s in OUR_SKILLS if has_word(s, text)]
     for word, skill in SYNONYMS.items():
         if skill not in matched and has_word(word, text):
             matched.append(skill)
     covered = set(OUR_SKILLS) | set(SYNONYMS)
     missing = [s for s in job["skills"] if s not in covered]
-    flags = [f for f in RED_FLAGS if f in text]
-    words = len(job["description"].split())
+    flags = [f for f in RED_FLAGS if f in raw.lower()]
+    contacts = contact_details(raw)
+    if contacts:
+        flags.append(f"contact details in post ({', '.join(contacts)})")
+    injected = injection_phrases(raw)
+    words = len(description.split())
 
     score, reasons = 1, []
     if matched:
@@ -134,13 +200,17 @@ def score_fit(job):
     if flags:
         score -= 2
         reasons.append(f"-2 red flags: {', '.join(flags)}")
+    if injected:
+        score = 1
+        reasons.append("=1 the post tries to give the assistant instructions "
+                       f"({', '.join(injected)}); treated as data, not followed")
     score = max(1, min(5, score))
     return score, reasons, matched, missing
 
 
 def draft_proposal(job, freelancer="The Blade Works team"):
     """Return a short draft proposal. Raises ValueError if a banned word slips in."""
-    score, _, matched, missing = score_fit(job)
+    score, reasons, matched, missing = score_fit(job)
     client = quote(job["client"], "there")
     title = quote(job["title"], "")
     lines = [f"Hi {client},", ""]
@@ -158,8 +228,12 @@ def draft_proposal(job, freelancer="The Blade Works team"):
               "3. Changes, short documentation and handover."]
     lines.append("")
     budget = quote(job["budget"], "")
-    lines.append(f"Your budget ({budget}) works for a first scoped version."
-                 if budget else "Happy to suggest a budget once the scope is clear.")
+    if budget and budget_fits(budget):
+        lines.append(f"Your budget ({budget}) is within our usual range for a "
+                     "first version; we will confirm once the scope is agreed.")
+    else:
+        lines.append("Could we first agree on the scope? Then we can say "
+                     "honestly what fits your budget.")
     lines += ["", "Kind regards,", freelancer]
     draft = "\n".join(lines)
     bad = find_banned(draft)
@@ -167,6 +241,9 @@ def draft_proposal(job, freelancer="The Blade Works team"):
         raise ValueError(f"draft contains banned words: {bad}")
     if score <= 2:
         draft = "NOTE: fit score is low - consider not applying.\n\n" + draft
+    if any(r.startswith("=1 ") for r in reasons):
+        draft = ("NOTE: the post contains instructions to the assistant. They "
+                 "were not followed. Check the post by hand.\n" + draft)
     return draft
 
 
