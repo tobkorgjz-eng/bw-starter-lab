@@ -44,6 +44,28 @@ class ChecklistTests(unittest.TestCase):
         self.assertLess(score, 50)
 
 
+class WholeWordTests(unittest.TestCase):
+    def make_job(self, description):
+        return {"title": "t", "client": "c", "budget": "", "skills": [],
+                "description": description}
+
+    def test_api_does_not_match_inside_rapid(self):
+        _, _, matched = ph.fit_checklist(self.make_job("We need rapid delivery."))
+        self.assertNotIn("api", matched)
+        _, _, matched = ph.fit_checklist(self.make_job("Connect to our API please."))
+        self.assertIn("api", matched)
+
+    def test_no_substring_matches(self):
+        _, _, matched = ph.fit_checklist(
+            self.make_job("An excellent team wants chatbots."))
+        self.assertNotIn("excel", matched)
+        self.assertNotIn("bots", matched)
+
+    def test_multi_word_skill(self):
+        self.assertTrue(ph.has_word("data cleaning", "some data cleaning work"))
+        self.assertFalse(ph.has_word("csv", "csvx files"))
+
+
 class DraftTests(unittest.TestCase):
     def test_draft_contains_parts(self):
         out = ph.draft_proposal(load("job_data_cleanup.txt"), freelancer="Test Person")

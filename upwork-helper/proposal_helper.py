@@ -34,6 +34,11 @@ $freelancer
 DEFAULT_SKILLS = ["python", "automation", "scraping", "api", "data cleaning",
                   "excel", "csv", "testing", "documentation", "bots"]
 
+def has_word(phrase, text):
+    """True if phrase appears in text as whole word(s), e.g. 'api' not in 'rapid'."""
+    return re.search(r"\b" + re.escape(phrase) + r"\b", text) is not None
+
+
 RED_FLAGS = ["unpaid test", "free sample", "pay after", "outside upwork",
              "off platform", "telegram", "whatsapp", "urgent asap"]
 
@@ -68,7 +73,7 @@ def fit_checklist(job, my_skills=None):
     """Return a list of (check, passed, note) tuples and a 0-100 score."""
     my_skills = [s.lower() for s in (my_skills or DEFAULT_SKILLS)]
     text = (job["description"] + " " + " ".join(job["skills"])).lower()
-    matched = [s for s in my_skills if s in text]
+    matched = [s for s in my_skills if has_word(s, text)]
     missing = [s for s in job["skills"] if s not in my_skills]
     flags = [f for f in RED_FLAGS if f in text]
     checks = [
