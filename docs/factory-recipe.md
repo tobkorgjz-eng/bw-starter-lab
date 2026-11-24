@@ -1,6 +1,6 @@
 # Factory recipe: the 9-box Blade Works run
 
-This is how one manager box and eight worker boxes built the Blade Works starter lab on 2026-11-24 (about 16:31 to 17:25 UTC, ~55 minutes), including one review and fix round. It is written so someone else can repeat the run. Blade Works ("Runs by your rules, asks before it acts.") is a made-up business, and all data in the repo is made up.
+This is how one manager box and eight worker boxes built the Blade Works starter lab on 2026-11-24 (about 16:31 to 17:25 UTC, ~55 minutes), including one review and fix round. It is written so someone else can repeat the run. Blade Works ("Runs by your rules, asks before it acts.") is a real small business; the clients, businesses and people in this repo are all made up.
 
 Sources: the nine `FEEDBACK/*.md` files on this branch, the exact prompts in [`docs/prompts/`](prompts/), and the manager's notes. No token or credential appears here.
 
