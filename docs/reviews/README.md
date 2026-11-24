@@ -47,6 +47,6 @@ per PR (`rr-N.md`).
 | [#5](rr-5.md) | 2a54531 | 43 OK | 2/2 fixed |
 | [#6](rr-6.md) | 8d3bff2 | 25 OK | 3/3 fixed |
 | [#7](rr-7.md) | 5671c47 | 50 OK | 5/5 fixed (format finding fixed by documenting it) |
-| [#9](rr-9.md) | see file | 6 OK | earlier 3/3 fixed; new: FEEDBACK-copy merge conflicts, outdated test counts |
+| [#9](rr-9.md) | 759143b | 6 OK | first 3/3 fixed; conflicts now only on `FEEDBACK/w7-reviewer.md` (needs another copy); `factory-recipe.md:12,21` counts and `:17` wording open |
 
 All-branch local merge (#1, #2, #4, #5, #6, #7, #8): `Total: 10 folders, 10 passed, 0 failed, 288 tests`, offline.
