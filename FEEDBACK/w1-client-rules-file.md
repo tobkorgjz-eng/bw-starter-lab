@@ -48,6 +48,11 @@ was not accepted.
 
     {"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest", "status": "401"}
 
+After the person updated the project's GitHub secret, the same
+credential worked at 16:56 (about 19 minutes after the first 401) with no
+new access request; `eval "$(discobox-access env)"` and a retry of the push
+was enough.
+
 ## Rough time per part
 
 - Repo checks, git identity, access request: ~2 min (approval wait ~1 min)
@@ -55,3 +60,4 @@ was not accepted.
 - Two worked examples + SKILL.md + INPUT-FORMAT.md: ~5 min
 - Tests (25, offline): ~3 min
 - Commit, push, PR via REST, this file: ~4 min
+- Waiting for the GitHub secret fix: ~19 min
