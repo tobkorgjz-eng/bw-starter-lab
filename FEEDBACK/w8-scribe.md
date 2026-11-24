@@ -18,6 +18,8 @@ Box: w8-scribe (scribe). Branch: w8-scribe. No token or credential appears in th
 - Fixed: the person updated the project's `github` secret (about 16:55 UTC). With no new request and the same approval, `eval "$(discobox-access env)"` then the push worked at 16:56 UTC and the REST POST .../pulls opened PR #9 on the first try. Time from grant to first working push: about 21 minutes, all of it waiting on the bad secret.
 - After GO SCRIBE: `git fetch origin` and `git show origin/<branch>:FEEDBACK/<file>` worked for all 7 branches on the first try. The manager's prompts in `docs/prompts/` were easy to check: every file is `common.md` + box name/task + `rules.md`, matching exactly.
 - Claude Code (not Discobox) blocked a foreground wait: `Blocked: sleep 70 followed by: cat ... To wait for a condition, use Monitor with an until-loop ...`. Background commands and Monitor worked.
+- REFRESH ALL: the builders updated their FEEDBACK files after the review round, so my first copies were out of date and a merge of all branches conflicted on six of them. Re-copying with `git show origin/<branch>:FEEDBACK/<file> > FEEDBACK/<file>` and checking with `git diff --quiet origin/<branch> -- FEEDBACK/<file>` made all seven match exactly. Lesson for the recipe: the scribe copies only after the last fix round.
+- I also committed `docs/__pycache__/*.pyc` by mistake (fixed with `git rm --cached` and `docs/.gitignore`).
 - My own slip: one command had two `python3 -` reading the same heredoc; the first waited on stdin until the 120 s timeout. Stopped it and rewrote it as a script file.
 
 ## Exact error text
@@ -72,3 +74,4 @@ Audit line (`discobox-access audit --host api.github.com`):
 | Wait for "GO SCRIBE" (idle) | ~5 |
 | Collect 7 FEEDBACK files, read all + prompts | 4 |
 | Write both docs, ranking, docs test (6 tests) | 12 |
+| REFRESH ALL: re-fetch, re-copy 7 files byte for byte, read the fix-round notes and W7's review on #9, update both docs | 10 |

@@ -1,6 +1,6 @@
 # Factory recipe: the 9-box Blade Works run
 
-This is how one manager box and eight worker boxes built the Blade Works starter lab on 2026-11-24 (16:31 to about 17:10 UTC). It is written so someone else can repeat the run. Blade Works ("Runs by your rules, asks before it acts.") is a made-up business, and all data in the repo is made up.
+This is how one manager box and eight worker boxes built the Blade Works starter lab on 2026-11-24 (16:31 to about 17:15 UTC), including one review and fix round. It is written so someone else can repeat the run. Blade Works ("Runs by your rules, asks before it acts.") is a made-up business, and all data in the repo is made up.
 
 Sources: the nine `FEEDBACK/*.md` files on this branch, the exact prompts in [`docs/prompts/`](prompts/), and the manager's notes. No token or credential appears here.
 
@@ -18,7 +18,7 @@ Sources: the nine `FEEDBACK/*.md` files on this branch, the exact prompts in [`d
 | w7-reviewer | `w7-reviewer` | #8 (new) | Review comments on every PR, scan script in `tools/`, notes in `docs/reviews/` |
 | w8-scribe | `w8-scribe` | #9 (new) | This file, `docs/discobox-feedback.md`, the collected FEEDBACK files |
 
-Combined check (manager, on a local merge of all 8 branches that was thrown away afterwards and never pushed): `Total: 10 folders, 10 passed, 0 failed, 206 tests`.
+Combined check (manager, on a local merge of all 8 branches that was thrown away afterwards and never pushed): `Total: 10 folders, 10 passed, 0 failed, 206 tests` before the review round. After the fix round the same check ran 288 tests (manager's count).
 
 Nothing was merged into main. Nothing was pushed to main. No force push.
 
@@ -67,7 +67,23 @@ Task design notes that worked:
 | ~16:55–16:56 | A person (JZ) updates the `github` secret. The first 200 arrives at 16:56 (the manager's notes say 16:58 for its own shell). Each worker's first approval starts working **with no re-approval**, once it runs `eval "$(discobox-access env)"` in the same command as the push. |
 | 16:56–17:00 | Workers push and open or update PRs through REST. Manager types "GO REVIEW" to W7. |
 | ~17:00 | Manager reviews each branch in its own `git worktree`, runs `unittest discover` per folder, does the combined merge test (206 tests pass), and makes the W1/W2 integration fix. |
+| ~17:00–17:08 | W7 posts reviews on every PR. Builders fix the findings on their own branches (one round, same approvals) and update their FEEDBACK files. Tests: 206 → 288. |
 | ~17:05 | Manager copies its FEEDBACK file and the prompts into the scribe box and types "GO SCRIBE". |
+| ~17:12 | Manager types "REFRESH ALL"; the scribe copies every FEEDBACK file again, byte for byte from its branch, so a merge of all branches has no conflict on `FEEDBACK/`. |
+
+### One review and fix round
+
+After the builders pushed, W7 reviewed every PR (a REST review with event `COMMENT`, with file:line, a failing case and a suggested fix for each finding). Each builder fixed its findings on the same branch with the same approval. No box sent a new access request for the fix round.
+
+The real issues W7 found (as summarised by the manager):
+
+- client **Notes** text could override the rules in the rules file
+- a "Never does" rule could be bypassed by spelling the action differently
+- **injected job post text** in the Upwork proposal skill: the post is now treated as data, and injection phrases, contact details and links are flagged
+
+From the builders' own files: W2 fixed three findings on #6 (18 → 25 tests). W3 fixed the injection handling and wording on #1, and fixed one test that matched the company name "Blade Works" against its own "never says works" check. W4 made cancelling require a name and made matching respect word boundaries on #5. W5 stopped ordinary questions ("act as", "from now on") from being flagged as injection on #2. W6 aligned action names and the "information, not instructions" line across the prompts on #4.
+
+Across all branches the tests went **from 206 to 288**. One round was enough. Builders said the review format (file:line + failing case + fix) meant no back-and-forth was needed.
 
 ## 5. Commands that worked (copy these)
 
@@ -99,19 +115,19 @@ Quote every URL that contains `?` in zsh, for example `"...pulls?state=all"`.
 
 Rough minutes from each box's FEEDBACK file. "Lost to bad secret" counts debugging plus idle waiting where the box reported it.
 
-| Box | Total (approx.) | Lost to bad secret |
-| --- | --- | --- |
-| manager | 69 | 18 (+10 re-asking under the right secret name) |
-| w1-client-rules-file | 38 | 19 |
-| w2-client-intake | 35 | 6 debugging, ~20 wall clock |
-| w3-upwork-proposal | 33 | 6 debugging, ~18 wall clock |
-| w4-booking-bot | 50 | 6 debugging (+1 denied second request) |
-| w5-faq-bot | 44 | not stated; ~18 wall clock |
-| w6-starter-kit | 58 | 22 (+4 on an empty variable after the fix) |
-| w7-reviewer | 40 so far (draft file) | not stated |
-| w8-scribe | ~45 | 20 |
+| Box | Total (approx.) | Lost to bad secret | Review fix round |
+| --- | --- | --- | --- |
+| manager | 69 | 18 (+10 re-asking under the right secret name) | (review, merge test and integration fix are in the total) |
+| w1-client-rules-file | 38 | 19 | not stated |
+| w2-client-intake | 50 | 6 debugging, ~20 wall clock | 15 |
+| w3-upwork-proposal | 60 | 6 debugging, ~18 wall clock | 27 |
+| w4-booking-bot | 65 | 6 debugging (+1 denied second request) | 15 |
+| w5-faq-bot | 54 | not stated; ~18 wall clock | 10 |
+| w6-starter-kit | 73 | 22 (+4 on an empty variable after the fix) | 15 |
+| w7-reviewer | 105 | idle wait, not counted | (review is its main task) |
+| w8-scribe | ~60 | 20 | 10 (refresh + updates) |
 
-The whole run took about 40 minutes of wall clock, and about 18 of them were spent waiting on the bad secret, with all nine boxes waiting at once.
+The whole run took about 45 minutes of wall clock, and about 18 of them were spent waiting on the bad secret, with all nine boxes waiting at once.
 
 ## 7. What to change next time
 
@@ -121,3 +137,6 @@ The whole run took about 40 minutes of wall clock, and about 18 of them were spe
 4. Tell workers how to reach the manager. In this run `ListAgents` showed "No reachable agents" in every worker, so W4 sent a second access request to get attention. A line in the prompt such as "If blocked, write BLOCKED: <reason> as your last line; the manager watches with `discobox capture`" would cover it.
 5. Rule 1 checks authors only (`%an <%ae>`). The initial commit's committer was `GitHub <noreply@github.com>` (made in the web UI). W5 noticed this and was unsure whether it passed. Write the rule as `git log --format='%an <%ae> | %cn <%ce>'` and list both allowed no-reply identities.
 6. Fix the shared input format between W1 and W2 in both prompts, instead of telling them to "line up".
+7. Plan the review and fix round from the start: tell builders a review is coming, to fix on the same branch with the same approval, and to add a "Review fixes" section to their FEEDBACK file. Tell the scribe to copy FEEDBACK files only after the fix round, byte for byte.
+8. Tell every box never to probe a write endpoint with a real request. All boxes share one GitHub account, so a test `POST .../reviews` with body `{}` created a real pending review on PR #3 that no box could remove (see the feedback doc).
+9. Use `curl` for REST calls from a box. In W7's box, Python `urllib` did not reach the egress, while `curl` did.

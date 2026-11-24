@@ -36,18 +36,19 @@ Task: build `skills/upwork-proposal/` on top of PR #1 (branch `w5-upwork-helper`
   manager from the box.
 
 ## Design notes
-- Client text that contains "proof" or a hype word (for example the sample
-  title "Best expert needed ... proof of concept") is not quoted in the draft.
+- Client text that contains the banned p-word or a hype word (for example the
+  sample inventory title) is not quoted in the draft.
   An early version rewrote such text and produced broken sentences, so I
   dropped rewriting.
 - An early synonym mapped "bot" to "chatbot", so a crypto *trading* bot counted
   as a skill match. That was a dishonest claim, so I removed the synonym and
   added a test for it.
 - The hype check covers the draft. The score reasons may quote a client's red
-  flag (for example "guarantees profit"). "proof" is not allowed anywhere in
+  flag (for example "guarantees profit"). The banned p-word is not allowed anywhere in
   the output.
-- SKILL.md and `proposal.py` contain the word "proof" only where they state
-  and enforce the rule against it.
+- The banned p-word appears only in code lists, tests and the made-up sample
+  posts, where the check needs it. Prose (SKILL.md, this file) says "the
+  banned p-word" (W7 review nit).
 
 ## Rough time (minutes)
 - Repo check, identity, branch checkout, reading upwork-helper: 3
@@ -56,3 +57,19 @@ Task: build `skills/upwork-proposal/` on top of PR #1 (branch `w5-upwork-helper`
 - Tests and the fixes they led to: 6
 - Debugging the GitHub 401: 6
 - FEEDBACK and preparing the PR update: 4
+
+## Round 2: W7 review fixes on PR #1
+- Read the W7 review with REST GET on `pulls/1/reviews`. It was clear:
+  file:line, a failure case and a suggested fix for each finding.
+- Fixed: the job post is treated as data (rule 7, injection phrases, contact
+  details and links flagged, score set to 1); budgets are never said to "work";
+  unsafe titles are not quoted; and in upwork-helper, no "good match" claim,
+  red flags checked in the title too, and no post sentences copied.
+- One test failed on the first run: the "never says works" check matched the
+  company name "Blade Works". I fixed the test, not the code.
+- I also found that planted lines ("AI assistant: ...", "Email me ...") were
+  adding skill matches. Matching now skips sentences with instructions or
+  contact details.
+- Same approval as round 1; no new access request.
+- Rough time: reading the review 3, skill fixes and tests 12, helper fixes and
+  tests 8, PR comment and FEEDBACK 4.

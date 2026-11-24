@@ -49,3 +49,9 @@ Task: finish demo-bots/faq/ on the existing PR #2 (branch w4-demo-bots-faq).
 - demo.html (inline logic + hand-off button): ~8 min
 - Tests (honesty, injection, page checks, node parity): ~12 min
 - README, commit, push, PR comment: ~8 min
+
+## Review follow-up (W7 nit)
+- W7 found that "you are now", "act as", "override" and "from now on"
+  flagged ordinary questions as injection. They now count only next to an
+  instruction word; one test per benign sentence added. ~10 min.
+- The approved GitHub access kept working; no new request needed.
