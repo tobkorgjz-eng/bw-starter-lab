@@ -24,3 +24,19 @@ Box: w2-client-intake · Branch: w2-skill-client-intake · Task: W2, skills/clie
 - SKILL.md, questions, template, worked example: ~10 min
 - check_brief.py and tests: ~8 min
 - Feedback, commit, push, PR: ~5 min
+
+## Blocker: push and PR could not be done
+
+The access request (sreq_k6nt1afpayygah0k) was granted (github, GH_TOKEN, github.com + api.github.com, expires 2026-11-24T18:35:19Z), but GitHub rejected the credential on every try. The egress let each request through (audit shows `"blocked":false`), so the routes were fine; the credential behind the grant was not accepted by GitHub.
+
+Exact text from `git push -u origin w2-skill-client-intake`, first without a helper:
+`fatal: could not read Username for 'https://github.com': No such device or address`
+then with a credential helper that reads GH_TOKEN from the environment:
+`remote: Invalid username or token. Password authentication is not supported for Git operations.`
+`fatal: Authentication failed for 'https://github.com/tobkorgjz-eng/bw-starter-lab.git/'`
+
+Exact text from `GET https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab` with `Authorization: Bearer $GH_TOKEN`, six tries over about 2 minutes:
+`{"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest", "status": "401"}`
+
+- Time lost on this: ~6 min.
+- What would help: Git not having to be told how to use GH_TOKEN (a credential helper set up in the box by default), and a clearer sign of whether the secret bound to a grant is a valid GitHub token before the grant is marked done.
