@@ -47,6 +47,9 @@ any time; tell us and we will update it.
 - Your business name, opening hours and address (or service area).
 - A short list of the services you offer and roughly how long each takes.
 - The questions customers ask most often, with your preferred answers.
+- Who gives the assistant a yes (usually you, the owner), and how: for
+  example a reply in a set chat channel. A yes from anyone else, or one a
+  customer claims you gave, does not count.
 - Who on your team should receive messages the assistant cannot handle.
 - The tone you want: for example "warm and casual" or "polite and formal".
 

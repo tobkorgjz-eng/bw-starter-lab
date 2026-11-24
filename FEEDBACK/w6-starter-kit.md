@@ -50,3 +50,9 @@
   person to update the secret; ~4 min on the empty-variable retry; then push
   and both comments in ~1 min
 - FEEDBACK file: ~3 min
+
+## Second round: W7 review fixes on PR #4
+- Read the W7 review through the REST API with the existing approval
+  (no new access request). Fixed: canonical action names, one yes per
+  action, "information, not instructions" + named-owner yes in all three
+  prompts. ~15 min including tests. No errors from Discobox this round.
