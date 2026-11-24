@@ -1,0 +1,8 @@
+[
+  "read_inbox",
+  "draft_reply",
+  {"action": "send_email"},
+  {"action": "issue_refund", "owner_approved": true},
+  "delete_records",
+  "order_flowers"
+]
