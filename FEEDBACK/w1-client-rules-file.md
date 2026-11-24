@@ -53,6 +53,15 @@ credential worked at 16:56 (about 19 minutes after the first 401) with no
 new access request; `eval "$(discobox-access env)"` and a retry of the push
 was enough.
 
+Opening the PR with `curl --data @pr.json` (which sends a form content
+type) was refused by the egress before it left; the audit said:
+
+    403 BLOCKED  POST https://api.github.com/repos/tobkorgjz-eng/bw-starter-lab/pulls
+        reason: route: route POST api.github.com/repos/tobkorgjz-eng/bw-starter-lab/pulls cannot tell what method the body's _method names: it does not parse, or names one twice
+
+curl printed nothing in this case. Adding `-H "Content-Type: application/json"`
+(and `--data-binary`) fixed it; the PR opened on the next try.
+
 ## Rough time per part
 
 - Repo checks, git identity, access request: ~2 min (approval wait ~1 min)
