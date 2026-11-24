@@ -53,12 +53,31 @@ def _overlaps(a_start, a_end, b_start, b_end):
 
 
 class Salon:
-    """In-memory schedule with a single chair."""
+    """In-memory schedule with a single chair.
 
-    def __init__(self, today=None):
-        self.today = today or date.today()
+    `clock` is a zero-argument callable returning the current datetime
+    (defaults to datetime.now); inject a fixed one for deterministic tests.
+    Passing only `today` means "the start of that day".
+    """
+
+    def __init__(self, today=None, clock=None):
+        if clock is None:
+            if today is not None:
+                start_of_day = datetime.combine(today, time.min)
+                clock = lambda: start_of_day
+            else:
+                clock = datetime.now
+        self.clock = clock
         self.bookings = {}
         self._next = 1
+
+    @property
+    def now(self):
+        return self.clock()
+
+    @property
+    def today(self):
+        return self.now.date()
 
     # -- queries ---------------------------------------------------------
     def is_open(self, day):
@@ -69,7 +88,8 @@ class Salon:
         if service not in SERVICES:
             raise BookingError(f"Unknown service '{service}'. "
                                f"Try one of: {', '.join(SERVICES)}.")
-        if not self.is_open(day) or day < self.today:
+        now = self.now
+        if not self.is_open(day) or day < now.date():
             return []
         length = timedelta(minutes=SERVICES[service][1])
         cursor = datetime.combine(day, OPEN_AT)
@@ -77,7 +97,7 @@ class Salon:
         slots = []
         while cursor + length <= close:
             end = cursor + length
-            if not any(_overlaps(cursor, end, b.start, b.end)
+            if cursor >= now and not any(_overlaps(cursor, end, b.start, b.end)
                        for b in self.bookings.values()):
                 slots.append(cursor)
             cursor += timedelta(minutes=STEP_MINUTES)
@@ -89,6 +109,8 @@ class Salon:
         customer = (customer or "").strip()
         if not customer:
             raise BookingError("Please give a name for the booking.")
+        if start < self.now:
+            raise BookingError("That time has already passed.")
         if start not in self.free_slots(start.date(), service):
             raise BookingError("That time is not available.")
         return start + timedelta(minutes=SERVICES[service][1])

@@ -59,6 +59,47 @@ class SalonTests(unittest.TestCase):
             self.salon.cancel(b.code)
 
 
+class NowTests(unittest.TestCase):
+    """Slots earlier than the current time are never offered or bookable."""
+
+    def setUp(self):
+        self.now = at(12, 10)  # Tue 2030-01-15 12:10
+        self.salon = Salon(clock=lambda: self.now)
+
+    def test_today_skips_past_start_times(self):
+        slots = self.salon.free_slots(date(2030, 1, 15), "haircut")
+        self.assertEqual(slots[0], at(12, 15))
+        self.assertTrue(all(s >= self.now for s in slots))
+        self.assertNotIn(at(12), slots)
+
+    def test_exactly_now_is_offered(self):
+        self.now = at(13)
+        self.assertEqual(self.salon.free_slots(date(2030, 1, 15), "haircut")[0], at(13))
+
+    def test_future_day_unaffected(self):
+        slots = self.salon.free_slots(date(2030, 1, 16), "haircut")
+        self.assertEqual(slots[0], datetime(2030, 1, 16, 9))
+
+    def test_booking_past_time_refused(self):
+        with self.assertRaisesRegex(BookingError, "already passed"):
+            self.salon.book("Test Customer", "haircut", at(9))
+        self.assertEqual(self.salon.bookings, {})
+        self.salon.book("Test Customer", "haircut", at(12, 15))
+
+    def test_bot_refuses_past_time_without_asking(self):
+        bot = BookingBot(self.salon)
+        reply = bot.handle("book haircut today 10:00 Test Customer")
+        self.assertIn("already passed", reply)
+        self.assertIsNone(bot.pending)
+
+    def test_time_passes_between_ask_and_yes(self):
+        bot = BookingBot(self.salon)
+        self.assertIn("Shall I book", bot.handle("book haircut today 12:15 Test Customer"))
+        self.now = at(12, 20)
+        self.assertIn("already passed", bot.handle("yes"))
+        self.assertEqual(self.salon.bookings, {})
+
+
 class BotTests(unittest.TestCase):
     def setUp(self):
         self.salon = Salon(today=TODAY)

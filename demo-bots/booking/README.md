@@ -19,6 +19,8 @@ cancel <code>                             then answer yes / no
 ```
 
 Open Mon-Sat 09:00-17:00, one chair, 15-minute start steps.
+Times earlier than now are never offered or bookable (`Salon(clock=...)`
+takes an injectable clock so tests are deterministic).
 
 ## Run
 

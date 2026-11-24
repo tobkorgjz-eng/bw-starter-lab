@@ -41,6 +41,9 @@
   var HELP = "I can help with:\n  services\n  slots <service> <date>\n  book <service> <date> <HH:MM> <your name>\n  cancel <code>\nDates: YYYY-MM-DD, today or tomorrow.";
   var bookings = {}, next = 1, pending = null;
   var today = new Date(); today.setHours(0,0,0,0);
+  // Current time, read fresh on every call (never offer slots before now).
+  function nowInfo(){ var n = new Date(), d = new Date(n); d.setHours(0,0,0,0); today = d; return { day: d, mins: n.getHours()*60 + n.getMinutes() + (n.getSeconds() || n.getMilliseconds() ? 1 : 0) }; }
+  function isPast(day, start){ var n = nowInfo(); return day < n.day || (iso(day) === iso(n.day) && start < n.mins); }
 
   function pad(n){ return (n<10?"0":"")+n; }
   function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
@@ -50,6 +53,7 @@
 
   function parseDay(t){
     t = t.toLowerCase();
+    nowInfo();
     if (t === "today") return new Date(today);
     if (t === "tomorrow") { var d = new Date(today); d.setDate(d.getDate()+1); return d; }
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
@@ -65,9 +69,10 @@
   }
   function freeSlots(day, svc){
     if (!SERVICES[svc]) throw new Err("Unknown service '"+svc+"'. Try one of: "+Object.keys(SERVICES).join(", ")+".");
-    if (day.getDay() === CLOSED_DAY || day < today) return [];
+    if (day.getDay() === CLOSED_DAY || day < nowInfo().day) return [];
     var len = SERVICES[svc][1], key = iso(day), out = [];
     for (var s = OPEN; s + len <= CLOSE; s += STEP) {
+      if (isPast(day, s)) continue;
       var clash = Object.keys(bookings).some(function(c){ var b = bookings[c]; return b.day === key && s < b.end && b.start < s+len; });
       if (!clash) out.push(s);
     }
@@ -75,6 +80,7 @@
   }
   function check(name, svc, day, start){
     if (!name.trim()) throw new Err("Please give a name for the booking.");
+    if (isPast(day, start)) throw new Err("That time has already passed.");
     if (freeSlots(day, svc).indexOf(start) < 0) throw new Err("That time is not available.");
     return start + SERVICES[svc][1];
   }
